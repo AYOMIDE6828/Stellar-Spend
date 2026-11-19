@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 
@@ -37,7 +37,7 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function formatTime(seconds: number): string {
+export default memo(QuoteComparison);function formatTime(seconds: number): string {
   if (seconds < 60) return `~${seconds}s`;
   const mins = Math.round(seconds / 60);
   return `~${mins}m`;
@@ -46,11 +46,15 @@ function formatTime(seconds: number): string {
 function QuoteComparison({ quotes, selectedId, onSelect, isLoading }: QuoteComparisonProps) {
   const [sortBy, setSortBy] = useState<'rate' | 'fee' | 'time'>('rate');
 
-  const sorted = [...quotes].sort((a, b) => {
-    if (sortBy === 'rate') return b.rate - a.rate;
-    if (sortBy === 'fee') return parseFloat(a.totalFee) - parseFloat(b.totalFee);
-    return a.estimatedTime - b.estimatedTime;
-  });
+  const sorted = useMemo(
+    () =>
+      [...quotes].sort((a, b) => {
+        if (sortBy === 'rate') return b.rate - a.rate;
+        if (sortBy === 'fee') return parseFloat(a.totalFee) - parseFloat(b.totalFee);
+        return a.estimatedTime - b.estimatedTime;
+      }),
+    [quotes, sortBy],
+  );
 
   if (isLoading) {
     return (
