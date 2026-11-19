@@ -50,7 +50,6 @@ function SettingsContent() {
     push: false,
     marketing: false,
   });
-  const [, setCurrency] = useState('USDC');
   const [userAddress, setUserAddress] = useState<string | null>(null);
 
   const { t, language, setLanguage } = useI18n();
@@ -67,7 +66,6 @@ function SettingsContent() {
 
   // TODO(#1362): Get user address from wallet context
   useEffect(() => {
-    // Placeholder - should get from wallet context
     const stored = localStorage.getItem('userAddress');
     if (stored) {
       setUserAddress(stored);
@@ -89,7 +87,6 @@ function SettingsContent() {
     setTheme('system');
     setLanguage('en');
     setNotifications({ email: true, push: false, marketing: false });
-    setCurrency('USDC');
   };
 
   return (

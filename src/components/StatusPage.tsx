@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useStatusPolling } from '@/hooks/useStatusPolling';
 import {
   type ComponentStatus,
   type CorridorStatus,
@@ -74,13 +75,11 @@ export default function StatusPage() {
     month: 99.87,
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useStatusPolling({
+    onPoll: () => {
       setComponents((prev) => prev.map((c) => ({ ...c, lastCheck: Date.now() })));
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+    },
+  });
 
   const overallStatus = components.every((c) => c.status === 'operational')
     ? 'operational'

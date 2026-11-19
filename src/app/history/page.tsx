@@ -12,6 +12,7 @@ import { InsuranceClaimForm } from '@/components/InsuranceClaimForm';
 import { TransactionSearchService } from '@/lib/transactions';
 import { applyFilters } from './filters';
 import { HistoryPageHeader, ConnectWalletPrompt, HistoryResults } from './components';
+import { useHistoryExport } from './components/HistoryExport';
 
 export default function HistoryPage() {
   return (
@@ -33,6 +34,7 @@ function HistoryPageContent() {
   const [noteError, setNoteError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const { exportCsv, exportJson } = useHistoryExport();
 
   const availableCurrencies = useMemo(() => {
     const currencies = new Set<string>();
@@ -72,6 +74,9 @@ function HistoryPageContent() {
     const name = window.prompt('Name this view:');
     if (name) filterState.saveCurrentView(name);
   };
+
+  const handleExportCsv = useCallback(() => exportCsv(filtered), [exportCsv, filtered]);
+  const handleExportJson = useCallback(() => exportJson(filtered), [exportJson, filtered]);
 
   return (
     <main className="min-h-screen p-4 bg-[#0a0a0a]">
@@ -120,6 +125,8 @@ function HistoryPageContent() {
               onPageSizeChange={setPageSize}
               onSaveNote={handleSaveNote}
               onFileClaim={setClaimingTransaction}
+              onExportCsv={handleExportCsv}
+              onExportJson={handleExportJson}
             />
           </AsyncBoundary>
         )}
