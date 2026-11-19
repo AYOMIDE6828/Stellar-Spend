@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
@@ -61,7 +62,11 @@ export function getEventIcon(type: string) {
   }
 }
 
-export function NotificationItem({ event, onClick, onRemove }: NotificationItemProps) {
+function NotificationItemComponent({ event, onClick, onRemove }: NotificationItemProps) {
+  const icon = useMemo(() => getEventIcon(event.type), [event.type]);
+  const typeColor = useMemo(() => getEventTypeColor(event.type), [event.type]);
+  const formattedTime = useMemo(() => formatTime(event.createdAt), [event.createdAt]);
+
   return (
     <li
       className={cn(
@@ -78,9 +83,7 @@ export function NotificationItem({ event, onClick, onRemove }: NotificationItemP
         aria-label={`${event.title}: ${event.description}`}
       >
         <div className="flex items-start gap-2 mb-1">
-          <span className={cn('shrink-0 mt-0.5', getEventTypeColor(event.type))}>
-            {getEventIcon(event.type)}
-          </span>
+          <span className={cn('shrink-0 mt-0.5', typeColor)}>{icon}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-semibold text-white truncate">{event.title}</h4>
@@ -89,7 +92,7 @@ export function NotificationItem({ event, onClick, onRemove }: NotificationItemP
               )}
             </div>
             <p className="text-[11px] text-[#777777] mt-0.5 line-clamp-2">{event.description}</p>
-            <p className="text-[10px] text-[#555555] mt-1">{formatTime(event.createdAt)}</p>
+            <p className="text-[10px] text-[#555555] mt-1">{formattedTime}</p>
           </div>
         </div>
 
@@ -116,3 +119,6 @@ export function NotificationItem({ event, onClick, onRemove }: NotificationItemP
     </li>
   );
 }
+
+export const NotificationItem = memo(NotificationItemComponent);
+NotificationItem.displayName = 'NotificationItem';

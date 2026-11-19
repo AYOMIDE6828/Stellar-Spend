@@ -93,6 +93,7 @@ export default defineConfig({
         '**/tests/**',
         '**/src/test/__snapshots__/**',
         '**/src/test/snapshots/**',
+        '**/src/test/contrast/**',
       ],
     },
     projects: [{

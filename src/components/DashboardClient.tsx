@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useDashboardWallet } from '@/hooks/useDashboardWallet';
 import { useWebVitals } from '@/hooks/useWebVitals';
 import Header from './Header';
@@ -13,7 +13,7 @@ import RightPanel from './RightPanel';
  * Separated to allow server-rendered static content in main page
  */
 
-export default function DashboardClient() {
+function DashboardClient() {
   // Track Web Vitals
   useWebVitals();
 
@@ -29,6 +29,18 @@ export default function DashboardClient() {
     // Implement actual submission logic
     await new Promise((resolve) => setTimeout(resolve, 2000));
     alert('Offramp initiated successfully!');
+  }, []);
+
+  const handleQuoteChange = useCallback((quote: QuoteResult | null) => {
+    setCurrentQuote(quote);
+  }, []);
+
+  const handleAmountChange = useCallback((amount: string) => {
+    setCurrentAmount(amount);
+  }, []);
+
+  const handleCurrencyChange = useCallback((currency: string) => {
+    setCurrentCurrency(currency);
   }, []);
 
   return (
@@ -52,12 +64,14 @@ export default function DashboardClient() {
           resetKey={resetKey}
           onConnect={handleConnect}
           onSubmit={handleSubmit}
-          onQuoteChange={setCurrentQuote}
-          onAmountChange={setCurrentAmount}
-          onCurrencyChange={setCurrentCurrency}
+          onQuoteChange={handleQuoteChange}
+          onAmountChange={handleAmountChange}
+          onCurrencyChange={handleCurrencyChange}
         />
         <RightPanel quote={currentQuote} amount={currentAmount} currency={currentCurrency} />
       </section>
     </>
   );
 }
+
+export default memo(DashboardClient);

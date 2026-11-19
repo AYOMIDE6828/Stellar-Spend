@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Transaction } from '@/lib/transaction-storage';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
@@ -8,10 +9,20 @@ import { useHistoryFilters } from '@/hooks/useHistoryFilters';
 import { Header } from '@/components/Header';
 import { TransactionTableSkeleton } from '@/components/skeletons';
 import { AsyncBoundary, ListErrorState } from '@/components/AsyncBoundary';
-import { InsuranceClaimForm } from '@/components/InsuranceClaimForm';
 import { TransactionSearchService } from '@/lib/transactions';
 import { applyFilters } from './filters';
-import { HistoryPageHeader, ConnectWalletPrompt, HistoryResults } from './components';
+import { HistoryPageHeader, ConnectWalletPrompt } from './components';
+
+// Heavy sub-components are code-split so the initial history route bundle stays small.
+const HistoryResults = dynamic(
+  () => import('./components').then((mod) => mod.HistoryResults),
+  { loading: () => <TransactionTableSkeleton rows={5} /> },
+);
+
+const InsuranceClaimForm = dynamic(
+  () => import('@/components/InsuranceClaimForm').then((mod) => mod.InsuranceClaimForm),
+  { loading: () => <TransactionTableSkeleton rows={2} /> },
+);
 
 export default function HistoryPage() {
   return (
@@ -126,13 +137,15 @@ function HistoryPageContent() {
       </section>
 
       {claimingTransaction?.insurance?.id && (
-        <InsuranceClaimForm
-          transactionId={claimingTransaction.id}
-          insuranceId={claimingTransaction.insurance.id}
-          coverage={claimingTransaction.insurance.coverage}
-          onSuccess={handleClaimSuccess}
-          onCancel={() => setClaimingTransaction(null)}
-        />
+        <Suspense fallback={<TransactionTableSkeleton rows={2} />}>
+          <InsuranceClaimForm
+            transactionId={claimingTransaction.id}
+            insuranceId={claimingTransaction.insurance.id}
+            coverage={claimingTransaction.insurance.coverage}
+            onSuccess={handleClaimSuccess}
+            onCancel={() => setClaimingTransaction(null)}
+          />
+        </Suspense>
       )}
     </main>
   );
