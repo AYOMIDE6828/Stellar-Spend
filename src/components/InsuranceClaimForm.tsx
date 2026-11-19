@@ -1,5 +1,10 @@
 'use client';
 
+import { FormEvent, useEffect, useState } from 'react';
+import { useForm } from '@/hooks/useForm';
+import { randomHexUpper } from '@/lib/crypto/ids';
+import { apiPatch } from '@/lib/api/client';
+import { useTranslations } from '@/hooks/useTranslations';
 import {
   type InsuranceClaimFormProps,
 } from './insurance-claim/types';
@@ -10,6 +15,12 @@ import { useInsuranceClaimForm } from '@/hooks/useInsuranceClaimForm';
 
 export * from './insurance-claim/types';
 
+const MOCK_INSURANCE_ID_PREFIX = 'ins_';
+const MOCK_SUBMIT_DELAY_MS = 1000;
+const ELIGIBILITY_CHECK_DELAY_MS = 1500;
+const CLAIM_ID_FALLBACK = 'CLAIM-FILED';
+const CLAIM_ID_RANDOM_LENGTH = 4;
+
 export function InsuranceClaimForm({
   transactionId,
   insuranceId,
@@ -17,18 +28,60 @@ export function InsuranceClaimForm({
   onSuccess,
   onCancel,
 }: InsuranceClaimFormProps) {
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(true);
+  const [isEligible, setIsEligible] = useState<boolean | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const { t } = useTranslations();
+
   const {
     values,
     error,
     loading,
-    isCheckingEligibility,
-    isEligible,
-    selectedFile,
-    filePreview,
+    isCheckingEligibility: hookIsCheckingEligibility,
+    isEligible: hookIsEligible,
+    selectedFile: hookSelectedFile,
+    filePreview: hookFilePreview,
     setFieldValue,
-    setFileError,
-    handleFileSelect,
-    handleSubmit,
+    setSubmitError,
+    handleSubmit: submitForm,
+  } = useForm({
+    initialValues: {
+      reason: '',
+      evidence: '',
+    },
+    schema: insuranceClaimSchema,
+    onSubmit: async (formValues) => {
+      if (!isEligible) return;
+
+      if (insuranceId.startsWith(MOCK_INSURANCE_ID_PREFIX)) {
+        await new Promise((r) => setTimeout(r, MOCK_SUBMIT_DELAY_MS));
+        onSuccess(
+          `CLAIM-${Date.now()}-${randomHexUpper(CLAIM_ID_RANDOM_LENGTH)}`,
+        );
+        return;
+      }
+
+      const data = await apiPatch<{ claim?: { claim_id?: string; id?: string } }>(
+        `/api/transactions/${encodeURIComponent(transactionId)}/insurance`,
+        {
+          insuranceId,
+          reason: formValues.reason,
+          evidence: formValues.evidence || undefined,
+        },
+      );
+
+      const claimId =
+        data?.claim?.claim_id ?? data?.claim?.id ?? CLAIM_ID_FALLBACK;
+      onSuccess(claimId);
+    },
+  });
+
+  const {
+    setFileError: setHookFileError,
+    handleFileSelect: hookHandleFileSelect,
+    handleSubmit: hookHandleSubmit,
   } = useInsuranceClaimForm({
     transactionId,
     insuranceId,
@@ -36,12 +89,51 @@ export function InsuranceClaimForm({
     onCancel,
   });
 
+  const error = fileError || submitError || errors.reason;
+
+  useEffect(() => {
+    const check = async () => {
+      setIsCheckingEligibility(true);
+      await new Promise((r) => setTimeout(r, ELIGIBILITY_CHECK_DELAY_MS));
+      setIsEligible(true);
+      setIsCheckingEligibility(false);
+    };
+    check();
+  }, [insuranceId]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onCancel]);
+
+  const handleFileSelect = (file: File) => {
+    setFileError(null);
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!values.reason || !isEligible) return;
+    setFileError(null);
+    setSubmitError(null);
+    await submitForm(e);
+  };
+
   return (
     <div
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="claim-form-title"
+      aria-label={t('insuranceClaim.dialogLabel')}
       aria-describedby="claim-form-description"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
@@ -84,4 +176,3 @@ export function InsuranceClaimForm({
     </div>
   );
 }
-

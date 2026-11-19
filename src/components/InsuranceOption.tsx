@@ -13,9 +13,18 @@ import { PremiumBreakdown } from './insurance-option/PremiumBreakdown';
 
 export * from './insurance-option/types';
 
+/** Default currency used when none is supplied. */
+export const DEFAULT_INSURANCE_CURRENCY = 'USDC';
+
+/** Interval (ms) at which the quote expiry countdown is refreshed. */
+export const QUOTE_COUNTDOWN_INTERVAL_MS = 1000;
+
+/** Minimum amount required before insurance can be enabled. */
+export const MIN_INSURANCE_AMOUNT = 0;
+
 export function InsuranceOption({
   amount,
-  currency = 'USDC',
+  currency = DEFAULT_INSURANCE_CURRENCY,
   onToggle,
   disabled = false,
 }: InsuranceOptionProps) {
@@ -29,7 +38,7 @@ export function InsuranceOption({
 
   // Recalculate quote whenever amount/currency changes
   useEffect(() => {
-    if (amount <= 0) {
+    if (amount <= MIN_INSURANCE_AMOUNT) {
       setQuote(null);
       if (enabled) {
         onToggle(false, null);
@@ -66,14 +75,14 @@ export function InsuranceOption({
     };
 
     tick();
-    timerRef.current = setInterval(tick, 1000);
+    timerRef.current = setInterval(tick, QUOTE_COUNTDOWN_INTERVAL_MS);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [quote, enabled, amount, currency, onToggle]);
 
   const handleToggle = useCallback(() => {
-    if (disabled || amount <= 0) return;
+    if (disabled || amount <= MIN_INSURANCE_AMOUNT) return;
     const newState = !enabled;
     setEnabled(newState);
     if (newState && !quote) {
@@ -85,7 +94,7 @@ export function InsuranceOption({
     }
   }, [disabled, amount, currency, enabled, quote, onToggle]);
 
-  const isDisabled = disabled || amount <= 0;
+  const isDisabled = disabled || amount <= MIN_INSURANCE_AMOUNT;
 
   const handleTermsKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -167,7 +176,7 @@ export function InsuranceOption({
               'hover:text-[#c9a962] transition-colors duration-150',
               'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
             )}
-            aria-label="View insurance terms and conditions"
+            aria-label={t('insurance.termsAriaLabel')}
             aria-haspopup="dialog"
           >
             {t('insurance.terms')}
@@ -175,7 +184,7 @@ export function InsuranceOption({
         </div>
 
         {/* Premium breakdown */}
-        {quote && amount > 0 && (
+        {quote && amount > MIN_INSURANCE_AMOUNT && (
           <PremiumBreakdown
             quote={quote}
             amount={amount}
@@ -185,10 +194,10 @@ export function InsuranceOption({
         )}
 
         {/* Disabled hint */}
-        {amount <= 0 && (
+        {amount <= MIN_INSURANCE_AMOUNT && (
           <div className="border-t border-[#222222] px-4 py-2">
             <p className="text-[10px] text-[#555555] tracking-wide italic">
-              Enter a transaction amount to see insurance options
+              {t('insurance.enterAmountHint')}
             </p>
           </div>
         )}
@@ -198,4 +207,3 @@ export function InsuranceOption({
     </>
   );
 }
-

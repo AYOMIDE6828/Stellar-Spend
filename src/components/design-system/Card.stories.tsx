@@ -12,6 +12,13 @@ const meta: Meta<typeof Card> = {
       control: 'select',
       options: ['default', 'elevated', 'outlined'],
     },
+    padding: {
+      control: 'select',
+      options: ['none', 'sm', 'md', 'lg'],
+    },
+    interactive: {
+      control: 'boolean',
+    },
   },
 };
 
@@ -39,6 +46,50 @@ export const Outlined: Story = {
   },
 };
 
+export const PaddingVariants: Story = {
+  render: (args) => (
+    <div className="space-y-4">
+      <Card {...args} padding="none">
+        <CardContent>No padding</CardContent>
+      </Card>
+      <Card {...args} padding="sm">
+        <CardContent>Small padding</CardContent>
+      </Card>
+      <Card {...args} padding="md">
+        <CardContent>Medium padding</CardContent>
+      </Card>
+      <Card {...args} padding="lg">
+        <CardContent>Large padding</CardContent>
+      </Card>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(canvas.getByText(/no padding/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/small padding/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/medium padding/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/large padding/i)).toBeInTheDocument();
+  },
+};
+
+export const InteractiveCard: Story = {
+  args: {
+    variant: 'elevated',
+    interactive: true,
+    children: 'Clickable interactive card.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const card = canvas.getByText(/clickable interactive card/i);
+    await expect(card).toBeInTheDocument();
+
+    await userEvent.click(card);
+    await expect(card).toBeInTheDocument();
+  },
+};
+
 export const WithHeaderAndFooter: Story = {
   render: (args) => (
     <Card {...args}>
@@ -60,40 +111,7 @@ export const WithHeaderAndFooter: Story = {
   ),
 };
 
-export const Interactive: Story = {
-  render: (args) => (
-    <Card {...args}>
-      <CardHeader>
-        <h3 className="text-lg font-semibold">User Information</h3>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <p><strong>Name:</strong> John Doe</p>
-          <p><strong>Email:</strong> john@example.com</p>
-          <p><strong>Status:</strong> Active</p>
-        </div>
-      </CardContent>
-    </Card>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    
-    // Test card header
-    const header = canvas.getByText(/user information/i);
-    await expect(header).toBeInTheDocument();
-    
-    // Test card content
-    const name = canvas.getByText(/john doe/i);
-    const email = canvas.getByText(/john@example.com/i);
-    const status = canvas.getByText(/active/i);
-    
-    await expect(name).toBeInTheDocument();
-    await expect(email).toBeInTheDocument();
-    await expect(status).toBeInTheDocument();
-  },
-};
-
-export const InteractiveWithButtons: Story = {
+export const WithButtons: Story = {
   render: (args) => (
     <Card {...args} variant="elevated">
       <CardHeader>

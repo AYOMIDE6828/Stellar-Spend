@@ -4,6 +4,10 @@ import { useEffect, useCallback } from 'react';
 import { useClipboard } from '@/hooks/useClipboard';
 import { useToast } from '@/contexts/NotificationProvider';
 import { Icon } from '@/components/Icon';
+import { useTranslations } from '@/hooks/useTranslations';
+
+/** Icon size (px) used for the copy/copy-check glyphs. */
+const COPY_ICON_SIZE = 14;
 
 interface CopyButtonProps {
   text: string;
@@ -17,20 +21,23 @@ interface CopyButtonProps {
 
 export function CopyButton({
   text,
-  label = 'Copy',
+  label,
   className = '',
   keyboardShortcut,
   iconOnly = false,
 }: CopyButtonProps) {
   const { isCopied, copy } = useClipboard();
   const { showToast } = useToast();
+  const { t } = useTranslations();
+
+  const resolvedLabel = label ?? t('copyButton.label');
 
   const handleCopy = useCallback(async () => {
     const success = await copy(text);
     if (success) {
-      showToast('Copied to clipboard', 'success');
+      showToast(t('copyButton.success'), 'success');
     } else {
-      showToast('Failed to copy — please copy manually', 'error');
+      showToast(t('copyButton.error'), 'error');
     }
   }, [copy, text, showToast]);
 
@@ -50,7 +57,9 @@ export function CopyButton({
     return () => window.removeEventListener('keydown', handler);
   }, [keyboardShortcut, handleCopy]);
 
-  const accessibleLabel = isCopied ? 'Copied!' : `${label}: ${text}`;
+  const accessibleLabel = isCopied
+    ? t('copyButton.copiedAria')
+    : t('copyButton.ariaLabel', { label: resolvedLabel, text });
 
   return (
     <button
@@ -60,18 +69,22 @@ export function CopyButton({
       aria-label={accessibleLabel}
       title={
         isCopied
-          ? 'Copied!'
+          ? t('copyButton.copiedAria')
           : keyboardShortcut
-            ? `Copy to clipboard (Ctrl+Shift+${keyboardShortcut.toUpperCase()})`
-            : 'Copy to clipboard'
+            ? t('copyButton.titleWithShortcut', {
+                shortcut: keyboardShortcut.toUpperCase(),
+              })
+            : t('copyButton.title')
       }
     >
       {isCopied ? (
-        <Icon name="copy-check" size={14} className="text-accent" aria-hidden="true" />
+        <Icon name="copy-check" size={COPY_ICON_SIZE} className="text-accent" aria-hidden="true" />
       ) : (
-        <Icon name="copy" size={14} aria-hidden="true" />
+        <Icon name="copy" size={COPY_ICON_SIZE} aria-hidden="true" />
       )}
-      {!iconOnly && <span aria-hidden="true">{isCopied ? 'Copied' : label}</span>}
+      {!iconOnly && (
+        <span aria-hidden="true">{isCopied ? t('copyButton.copied') : resolvedLabel}</span>
+      )}
     </button>
   );
 }

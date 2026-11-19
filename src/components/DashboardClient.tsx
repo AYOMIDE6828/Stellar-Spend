@@ -3,12 +3,20 @@
 import { useState, useCallback, memo } from 'react';
 import { useDashboardWallet } from '@/hooks/useDashboardWallet';
 import { useWebVitals } from '@/hooks/useWebVitals';
+import { useTranslations } from '@/lib/i18n';
 import {
   DashboardHeaderSection,
   OfframpFormSection,
   RightPanelSection,
   useDashboardState,
 } from '@/features/dashboard';
+
+/** Simulated submission latency (ms) for the off-ramp flow. */
+const SUBMIT_DELAY_MS = 2000;
+
+/** Placeholder balances shown while connected (demo data). */
+const DEMO_USDC_BALANCE = '1,234.56';
+const DEMO_XLM_BALANCE = '567.89';
 
 /**
  * DashboardClient - Client Component
@@ -20,51 +28,28 @@ function DashboardClient() {
   // Track Web Vitals
   useWebVitals();
 
-// src/features/dashboard/useDashboardState.ts
-'use client';
+  const t = useTranslations('dashboard');
 
-import { useState, useCallback } from 'react';
-import type { OfframpPayload, QuoteResult } from '@/components/FormCard';
+  const { isConnected, isConnecting, walletAddress, resetKey, handleConnect, handleDisconnect } =
+    useDashboardWallet();
 
-export interface DashboardState {
-  currentQuote: QuoteResult | null;
-  currentAmount: string;
-  currentCurrency: string;
-  handleSubmit: (payload: OfframpPayload) => Promise<void>;
-  handleQuoteChange: (quote: QuoteResult | null) => void;
-  handleAmountChange: (amount: string) => void;
-  handleCurrencyChange: (currency: string) => void;
-}
-
-export function useDashboardState(): DashboardState {
-  const [currentQuote, setCurrentQuote] = useState<QuoteResult | null>(null);
-  const [currentAmount, setCurrentAmount] = useState('');
-  const [currentCurrency, setCurrentCurrency] = useState('');
-
-  const handleSubmit = useCallback(async (_payload: OfframpPayload) => {
-    // Implement actual submission logic
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    alert('Offramp initiated successfully!');
-  }, []);
-
-  const handleQuoteChange = useCallback((quote: QuoteResult | null) => {
-    setCurrentQuote(quote);
-  }, []);
-
-  const handleAmountChange = useCallback((amount: string) => {
-    setCurrentAmount(amount);
-  }, []);
-
-  const handleCurrencyChange = useCallback((currency: string) => {
-    setCurrentCurrency(currency);
-  }, []);
+  const {
+    handleSubmit,
+    handleQuoteChange,
+    handleAmountChange,
+    handleCurrencyChange,
+  } = useDashboardState();
 
   return (
     <>
       <DashboardHeaderSection
+        subtitle={t('subtitle')}
         isConnected={isConnected}
         isConnecting={isConnecting}
         walletAddress={walletAddress}
+        stellarUsdcBalance={isConnected ? DEMO_USDC_BALANCE : null}
+        stellarXlmBalance={isConnected ? DEMO_XLM_BALANCE : null}
+        isBalanceLoading={false}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
       />
@@ -80,6 +65,7 @@ export function useDashboardState(): DashboardState {
           onAmountChange={handleAmountChange}
           onCurrencyChange={handleCurrencyChange}
         />
+        <RightPanelSection />
       </section>
     </>
   );

@@ -22,8 +22,27 @@ import { PayoutBox } from './form-card/PayoutBox';
 import { FeeMethodSelector } from './form-card/FeeMethodSelector';
 import { useFormCardState } from '@/hooks/useFormCardState';
 import { bpClasses } from '@/lib/breakpoints';
+import { useTranslations } from '@/lib/i18n';
 
 export * from './form-card/types';
+
+const MIN_VALID_AMOUNT = 0.7;
+const USDC = 'USDC';
+const LOADING_PLACEHOLDER = '...';
+const KEYBOARD_SUBMIT_KEY = 'Enter';
+const CTA_MIN_HEIGHT_CLASS = 'min-h-[52px]';
+const CTA_BASE_CLASSES =
+  'w-full py-4 text-xs font-bold tracking-[0.2em] transition-all duration-200';
+const CTA_FOCUS_CLASSES =
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]';
+const CTA_READY_CLASSES = 'bg-[#c9a962] text-black hover:bg-[#d4b982]';
+const CTA_DISABLED_CLASSES =
+  'bg-[#222222] text-[#555555] cursor-not-allowed border border-[#333333]';
+const CTA_PENDING_CLASSES = 'animate-pulse';
+const ERROR_MESSAGE_CLASSES = 'text-[10px] text-red-400 tracking-wide';
+const SECTION_CLASSES = 'flex flex-col gap-6';
+const CARD_CLASSES = 'bg-[#111111] border border-[#333333] p-6 flex flex-col gap-6';
+const GRID_CLASSES = `grid grid-cols-1 ${bpClasses.gridTwoCols} gap-4`;
 
 export function FormCard(props: FormCardProps) {
   const {
@@ -32,6 +51,8 @@ export function FormCard(props: FormCardProps) {
     onConnect,
     isInitialLoading,
   } = props;
+
+  const t = useTranslations('formCard');
 
   const { rate: liveRate, flash: rateFlash } = useFxRate();
 
@@ -98,7 +119,7 @@ export function FormCard(props: FormCardProps) {
         !!verifyError));
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !ctaDisabled) {
+    if ((event.ctrlKey || event.metaKey) && event.key === KEYBOARD_SUBMIT_KEY && !ctaDisabled) {
       event.preventDefault();
       void submitOfframp();
     }
@@ -106,23 +127,27 @@ export function FormCard(props: FormCardProps) {
 
   return (
     <section
-      className="flex flex-col gap-6"
+      className={SECTION_CLASSES}
       onKeyDown={handleKeyDown}
       aria-label="Off-ramp form"
       aria-busy={isSubmitting}
     >
-      <div className="bg-[#111111] border border-[#333333] p-6 flex flex-col gap-6">
+      <div className={CARD_CLASSES}>
         <InputField
-          label="Amount (USDC)"
+          label={t('amountLabel')}
           id="amount"
           value={amount}
           onChange={handleAmountChange}
           onBlur={() => touchField('amount')}
           type="number"
-          placeholder="0.00"
-          suffix={isQuoteLoading ? '...' : 'USDC'}
+          placeholder={t('amountPlaceholder')}
+          suffix={isQuoteLoading ? LOADING_PLACEHOLDER : USDC}
           error={amountError || quoteError}
-          success={validateAmount(amount) && parseFloat(amount) >= 0.7 ? 'Valid amount' : undefined}
+          success={
+            validateAmount(amount) && parseFloat(amount) >= MIN_VALID_AMOUNT
+              ? t('validAmount')
+              : undefined
+          }
           touched={touchedFields['amount']}
           disabled={!isConnected || isSubmitting}
           aria-describedby="amount-error"
@@ -136,27 +161,29 @@ export function FormCard(props: FormCardProps) {
           onChange={handleFeeMethodChange}
         />
 
-        <div className={`grid grid-cols-1 ${bpClasses.gridTwoCols} gap-4`}>
+        <div className={GRID_CLASSES}>
           <SelectField
-            label="Currency"
+            label={t('currencyLabel')}
             id="currency"
             value={currency}
             options={currencies.map((c: Currency) => {
               const flag = getCurrencyFlag(c.code);
               return {
                 value: c.code,
-                label: flag ? `${flag} ${c.name} (${c.code})` : `${c.name} (${c.code})`,
+                label: flag
+                  ? t('currencyOptionWithFlag', { flag, name: c.name, code: c.code })
+                  : t('currencyOption', { name: c.name, code: c.code }),
               };
             })}
             onChange={handleCurrencyChange}
             onBlur={() => touchField('currency')}
             loading={isCurrenciesLoading}
             disabled={!isConnected || isSubmitting}
-            error="Please select a currency"
+            error={t('currencyError')}
             touched={touchedFields['currency']}
           />
           <SelectField
-            label="Bank / Institution"
+            label={t('institutionLabel')}
             id="institution"
             value={institution}
             options={institutions.map((i: Institution) => ({ value: i.code, label: i.name }))}
@@ -164,8 +191,8 @@ export function FormCard(props: FormCardProps) {
             onBlur={() => touchField('institution')}
             loading={isInstitutionsLoading}
             disabled={!currency || !isConnected || isSubmitting}
-            placeholder={currency ? 'Select bank...' : 'Select currency first'}
-            error="Please select a bank"
+            placeholder={currency ? t('institutionPlaceholder') : t('institutionPlaceholderNoCurrency')}
+            error={t('institutionError')}
             touched={touchedFields['institution']}
           />
         </div>
@@ -188,17 +215,19 @@ export function FormCard(props: FormCardProps) {
             id="verify-error"
             role="alert"
             data-testid="error-message"
-            className="text-[10px] text-red-400 tracking-wide"
+            className={ERROR_MESSAGE_CLASSES}
           >
             {verifyError}
           </span>
         )}
 
         <ResolvedField
-          label="Account Name"
+          label={t('accountNameLabel')}
           value={accountName}
           loading={isVerifyingAccount}
-          placeholder={accountNumber ? 'Verifying…' : 'Enter account number to verify'}
+          placeholder={
+            accountNumber ? t('accountNameVerifying') : t('accountNamePlaceholder')
+          }
         />
 
         {quote && (
@@ -207,7 +236,7 @@ export function FormCard(props: FormCardProps) {
 
         <InsuranceOption
           amount={parseFloat(amount) || 0}
-          currency="USDC"
+          currency={USDC}
           disabled={!isConnected || isSubmitting}
           onToggle={(enabled, selectedQuote) => {
             setInsuranceEnabled(enabled);
@@ -223,12 +252,11 @@ export function FormCard(props: FormCardProps) {
           aria-busy={ctaState === 'connecting' || ctaState === 'submitting'}
           data-testid="offramp-cta-button"
           className={cn(
-            'w-full py-4 min-h-[52px] text-xs font-bold tracking-[0.2em] transition-all duration-200',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]',
-            ctaState === 'ready'
-              ? 'bg-[#c9a962] text-black hover:bg-[#d4b982]'
-              : 'bg-[#222222] text-[#555555] cursor-not-allowed border border-[#333333]',
-            (ctaState === 'connecting' || ctaState === 'submitting') && 'animate-pulse',
+            CTA_BASE_CLASSES,
+            CTA_MIN_HEIGHT_CLASS,
+            CTA_FOCUS_CLASSES,
+            ctaState === 'ready' ? CTA_READY_CLASSES : CTA_DISABLED_CLASSES,
+            (ctaState === 'connecting' || ctaState === 'submitting') && CTA_PENDING_CLASSES,
           )}
         >
           {getCtaLabel(ctaState)}
@@ -237,4 +265,3 @@ export function FormCard(props: FormCardProps) {
     </section>
   );
 }
-

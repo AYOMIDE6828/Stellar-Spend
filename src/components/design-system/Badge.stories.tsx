@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { within, expect } from '@storybook/test';
 import { Badge } from './Badge';
 
+const VARIANTS = ['default', 'success', 'warning', 'error', 'info'] as const;
+
 const meta: Meta<typeof Badge> = {
   title: 'Design System/Badge',
   component: Badge,
@@ -52,34 +54,24 @@ export const Info: Story = {
   },
 };
 
-export const Interactive: Story = {
-  args: {
-    variant: 'success',
-    children: 'Badge rendered',
-  },
+export const AllVariants: Story = {
+  render: (args) => (
+    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {VARIANTS.map((variant) => (
+        <Badge key={variant} {...args} variant={variant}>
+          {variant.charAt(0).toUpperCase() + variant.slice(1)}
+        </Badge>
+      ))}
+    </div>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const badge = canvas.getByText(/badge rendered/i);
-    
-    // Test badge is rendered
-    await expect(badge).toBeInTheDocument();
-    
-    // Test badge has correct content
-    await expect(badge).toHaveTextContent('Badge rendered');
-  },
-};
 
-export const VariantStates: Story = {
-  args: {
-    variant: 'warning',
-    children: 'Status: Pending',
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const badge = canvas.getByText(/status: pending/i);
-    
-    // Test badge displays variant state
-    await expect(badge).toBeInTheDocument();
-    await expect(badge).toHaveTextContent('Status: Pending');
+    for (const variant of VARIANTS) {
+      const label = variant.charAt(0).toUpperCase() + variant.slice(1);
+      const badge = canvas.getByText(label);
+      await expect(badge).toBeInTheDocument();
+      await expect(badge).toHaveTextContent(label);
+    }
   },
 };

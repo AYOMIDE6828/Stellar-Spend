@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useTranslations } from '@/lib/i18n';
 import { useStatusPolling } from '@/hooks/useStatusPolling';
 import {
   type ComponentStatus,
@@ -17,7 +18,11 @@ import { formatDateTime } from '@/lib/format';
 
 export * from './status-page/types';
 
+/** Interval (ms) at which component health checks are refreshed. */
+export const STATUS_REFRESH_INTERVAL_MS = 30000;
+
 export default function StatusPage() {
+  const t = useTranslations('statusPage');
   const [components, setComponents] = useState<ComponentStatus[]>([
     {
       name: 'API',
@@ -79,6 +84,7 @@ export default function StatusPage() {
     onPoll: () => {
       setComponents((prev) => prev.map((c) => ({ ...c, lastCheck: Date.now() })));
     },
+    intervalMs: STATUS_REFRESH_INTERVAL_MS,
   });
 
   const overallStatus = useMemo(
@@ -105,8 +111,8 @@ export default function StatusPage() {
       <div className="max-w-5xl mx-auto px-4 py-12 space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">System Status</h1>
-          <p className="text-sm text-[#777]">Real-time status and uptime transparency</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-[#777]">{t('subtitle')}</p>
         </div>
 
         {/* Overall Status */}
@@ -120,7 +126,11 @@ export default function StatusPage() {
             <div className="w-3 h-3 rounded-full bg-current animate-pulse" aria-hidden="true" />
             <div>
               <div className="text-lg font-semibold">{getStatusText(overallStatus)}</div>
-              <div className="text-xs opacity-75">All systems are operating normally</div>
+              <div className="text-xs opacity-75">
+                {overallStatus === 'operational'
+                  ? t('allSystemsNormal')
+                  : t('someSystemsAffected')}
+              </div>
             </div>
           </div>
         </div>
@@ -138,7 +148,7 @@ export default function StatusPage() {
               id="active-incidents-heading"
               className="text-sm font-semibold uppercase tracking-wider text-yellow-400"
             >
-              Active Incidents
+              {t('activeIncidents')}
             </h2>
             {formattedIncidents.map((incident) => (
               <div key={incident.id} className="space-y-2">
@@ -171,10 +181,10 @@ export default function StatusPage() {
           aria-labelledby="subscribe-heading"
         >
           <h2 id="subscribe-heading" className="text-sm font-semibold uppercase tracking-wider">
-            Get Updates
+            {t('getUpdates')}
           </h2>
           <p id="subscribe-description" className="text-xs text-[#777]">
-            Subscribe to receive notifications about system status and incidents
+            {t('subscribeDescription')}
           </p>
           <form
             className="flex gap-2"
@@ -182,30 +192,30 @@ export default function StatusPage() {
             onSubmit={(e) => e.preventDefault()}
           >
             <label htmlFor="status-subscribe-email" className="sr-only">
-              Email address
+              {t('emailPlaceholder')}
             </label>
             <input
               id="status-subscribe-email"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="your@email.com"
-              aria-label="Email address"
+              placeholder={t('emailPlaceholder')}
+              aria-label={t('emailPlaceholder')}
               className="flex-1 bg-[#0a0a0a] border border-[#333] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c9a962] focus-visible:ring-2 focus-visible:ring-[#c9a962]"
             />
             <button
               type="submit"
               className="text-[10px] tracking-widest uppercase px-4 py-2 border border-[#c9a962] text-[#c9a962] hover:bg-[#c9a962] hover:text-[#0a0a0a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
             >
-              Subscribe
+              {t('subscribe')}
             </button>
           </form>
         </section>
 
         {/* Footer */}
         <footer className="text-center text-xs text-[#555] space-y-1">
-          <p>Updated every 30 seconds</p>
-          <p>Status powered by Stellar Spend Health Monitoring</p>
+          <p>{t('refreshNotice', { seconds: STATUS_REFRESH_INTERVAL_MS / 1000 })}</p>
+          <p>{t('poweredBy')}</p>
         </footer>
       </div>
     </main>

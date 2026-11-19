@@ -4,12 +4,17 @@ import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
+import { useTranslations } from '@/lib/i18n';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
 import type { NotificationCenterProps } from './notification-center/types';
 import { NotificationPanel } from './notification-center/NotificationPanel';
 import { useNotificationEvents } from './notification-center/NotificationCenterContext';
 
 export * from './notification-center/types';
+
+const BELL_ICON_SIZE = 20;
+const ANNOUNCEMENT_CLEAR_DELAY_MS = 2000;
+const NOTIFICATION_ITEM_BUTTON_SELECTOR = 'li button:first-of-type';
 
 function NotificationCenterComponent({
   events,
@@ -24,6 +29,7 @@ function NotificationCenterComponent({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const t = useTranslations('notificationCenter');
 
   // All panel/announcement/focus state lives in the shared notification context.
   // Props remain the source of truth for backwards compatibility.
@@ -52,14 +58,13 @@ function NotificationCenterComponent({
     }
     wasOpenRef.current = isOpen;
   }, [isOpen]);
-=======
 
   // Focus the correct notification button when focusedIndex changes
   useEffect(() => {
     if (!isOpen || focusedIndex < 0) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const buttons = panel.querySelectorAll<HTMLButtonElement>('li button:first-of-type');
+    const buttons = panel.querySelectorAll<HTMLButtonElement>(NOTIFICATION_ITEM_BUTTON_SELECTOR);
     const target = buttons[focusedIndex];
     target?.focus();
   }, [focusedIndex, isOpen]);
@@ -92,7 +97,6 @@ function NotificationCenterComponent({
         buttonRef.current?.focus();
         return;
       }
-=======
 
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -139,24 +143,24 @@ function NotificationCenterComponent({
       }
       if (event.link) {
         router.push(event.link.href);
-        setIsOpen(false);
+        closePanel();
       }
     },
-    [onMarkAsRead, router],
+    [onMarkAsRead, router, closePanel],
   );
 
   const handleTogglePanel = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+    togglePanel();
+  }, [togglePanel]);
 
   const bellAriaLabel = useMemo(
-    () => `Notifications (${unreadCount} unread)`,
-    [unreadCount],
+    () => t('bell.ariaLabel', { count: unreadCount }),
+    [t, unreadCount],
   );
 
   const unreadAriaLabel = useMemo(
-    () => `${unreadCount} unread notifications`,
-    [unreadCount],
+    () => t('badge.ariaLabel', { count: unreadCount }),
+    [t, unreadCount],
   );
 
   return (
@@ -173,7 +177,6 @@ function NotificationCenterComponent({
       >
         {announcement}
       </div>
-=======
 
       {/* Bell Button */}
       <button
@@ -183,7 +186,6 @@ function NotificationCenterComponent({
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         aria-controls="notification-center-panel"
-=======
         className={cn(
           'relative p-2 text-[#777777] hover:text-[#c9a962] transition-colors',
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
@@ -192,7 +194,7 @@ function NotificationCenterComponent({
         title={bellAriaLabel}
       >
         {/* Bell Icon */}
-        <Icon name="bell" size={20} />
+        <Icon name="bell" size={BELL_ICON_SIZE} />
 
         {/* Unread Badge */}
         {unreadCount > 0 && (
@@ -207,7 +209,6 @@ function NotificationCenterComponent({
             {unreadBadgeText}
           </span>
         )}
-=======
       </button>
 
       {/* Dropdown Panel */}
@@ -223,11 +224,9 @@ function NotificationCenterComponent({
           onClearAll={onClearAll}
         />
       )}
-=======
     </div>
   );
 }
 
 export const NotificationCenter = memo(NotificationCenterComponent);
 NotificationCenter.displayName = 'NotificationCenter';
-

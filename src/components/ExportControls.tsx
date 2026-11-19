@@ -5,6 +5,16 @@ import { cn } from '@/lib/cn';
 import { logger } from '@/lib/logger';
 import type { Transaction } from '@/lib/transaction-storage';
 import { exportCSV, exportPDF, exportJSON, exportXLSX, filterByDateRange } from '@/lib/export';
+import { useTranslation } from '@/lib/i18n';
+
+const WALLET_SLUG_PREFIX_LENGTH = 6;
+const WALLET_SLUG_SUFFIX_LENGTH = 4;
+const DEFAULT_WALLET_SLUG = 'wallet';
+const EXPORT_BASENAME_PREFIX = 'stellar_spend';
+const DATE_RANGE_START_FALLBACK = 'start';
+const DATE_RANGE_END_FALLBACK = 'end';
+
+type ExportFormat = 'csv' | 'pdf' | 'json' | 'xlsx';
 
 /**
  * Number of transactions above which we defer the export work to the next
@@ -13,14 +23,13 @@ import { exportCSV, exportPDF, exportJSON, exportXLSX, filterByDateRange } from 
  */
 export const LARGE_EXPORT_THRESHOLD = 1000;
 
-type ExportFormat = 'csv' | 'pdf' | 'json' | 'xlsx';
-
 interface Props {
   transactions: Transaction[];
   walletAddress?: string;
 }
 
-function ExportControls({ transactions, walletAddress }: Props) {
+export default function ExportControls({ transactions, walletAddress }: Props) {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
@@ -33,9 +42,14 @@ function ExportControls({ transactions, walletAddress }: Props) {
   const disabled = filtered.length === 0;
   const isExporting = exporting !== null;
 
-  const slug = walletAddress ? `${walletAddress.slice(0, 6)}_${walletAddress.slice(-4)}` : 'wallet';
-  const dateTag = dateFrom || dateTo ? `_${dateFrom || 'start'}_to_${dateTo || 'end'}` : '';
-  const basename = `stellar_spend_${slug}${dateTag}`;
+  const slug = walletAddress
+    ? `${walletAddress.slice(0, WALLET_SLUG_PREFIX_LENGTH)}_${walletAddress.slice(-WALLET_SLUG_SUFFIX_LENGTH)}`
+    : DEFAULT_WALLET_SLUG;
+  const dateTag =
+    dateFrom || dateTo
+      ? `_${dateFrom || DATE_RANGE_START_FALLBACK}_to_${dateTo || DATE_RANGE_END_FALLBACK}`
+      : '';
+  const basename = `${EXPORT_BASENAME_PREFIX}_${slug}${dateTag}`;
 
   const inputCls = cn(
     'bg-[#0a0a0a] border border-[#333333] px-3 py-2 text-xs text-white',
@@ -97,14 +111,14 @@ function ExportControls({ transactions, walletAddress }: Props) {
           htmlFor={fromId}
           className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap"
         >
-          From
+          {t('export.from')}
         </label>
         <input
           id={fromId}
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          aria-label="Export date from"
+          aria-label={t('export.dateFromAria')}
           className={inputCls}
         />
       </div>
@@ -113,14 +127,14 @@ function ExportControls({ transactions, walletAddress }: Props) {
           htmlFor={toId}
           className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap"
         >
-          To
+          {t('export.to')}
         </label>
         <input
           id={toId}
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          aria-label="Export date to"
+          aria-label={t('export.dateToAria')}
           className={inputCls}
         />
       </div>
@@ -131,7 +145,10 @@ function ExportControls({ transactions, walletAddress }: Props) {
         aria-live="polite"
         className="text-[10px] text-[#555555] whitespace-nowrap"
       >
-        {filtered.length} / {transactions.length} tx
+        {t('export.transactionCount', {
+          filtered: filtered.length,
+          total: transactions.length,
+        })}
       </span>
 
       {/* CSV */}
@@ -139,12 +156,12 @@ function ExportControls({ transactions, walletAddress }: Props) {
         type="button"
         onClick={() => handleExport('csv')}
         disabled={disabled || isExporting}
-        aria-label="Export as CSV"
+        aria-label={t('export.csvAria')}
         aria-busy={exporting === 'csv'}
         data-testid="export-button"
         className={buttonCls('csv')}
       >
-        {exporting === 'csv' ? '⟳ CSV' : '↓ CSV'}
+        {exporting === 'csv' ? t('export.csvLoading') : t('export.csv')}
       </button>
 
       {/* JSON */}
@@ -152,11 +169,11 @@ function ExportControls({ transactions, walletAddress }: Props) {
         type="button"
         onClick={() => handleExport('json')}
         disabled={disabled || isExporting}
-        aria-label="Export as JSON"
+        aria-label={t('export.jsonAria')}
         aria-busy={exporting === 'json'}
         className={buttonCls('json')}
       >
-        {exporting === 'json' ? '⟳ JSON' : '↓ JSON'}
+        {exporting === 'json' ? t('export.jsonLoading') : t('export.json')}
       </button>
 
       {/* XLSX */}
@@ -164,11 +181,11 @@ function ExportControls({ transactions, walletAddress }: Props) {
         type="button"
         onClick={() => handleExport('xlsx')}
         disabled={disabled || isExporting}
-        aria-label="Export as Excel"
+        aria-label={t('export.xlsxAria')}
         aria-busy={exporting === 'xlsx'}
         className={buttonCls('xlsx')}
       >
-        {exporting === 'xlsx' ? '⟳ XLSX' : '↓ XLSX'}
+        {exporting === 'xlsx' ? t('export.xlsxLoading') : t('export.xlsx')}
       </button>
 
       {/* PDF */}
@@ -176,7 +193,7 @@ function ExportControls({ transactions, walletAddress }: Props) {
         type="button"
         onClick={() => handleExport('pdf')}
         disabled={disabled || isExporting}
-        aria-label="Export as PDF"
+        aria-label={t('export.pdfAria')}
         aria-busy={exporting === 'pdf'}
         className={cn(
           'text-[10px] tracking-widest uppercase px-4 py-2 border transition-colors duration-150',
@@ -186,7 +203,7 @@ function ExportControls({ transactions, walletAddress }: Props) {
           exporting === 'pdf' && 'opacity-60',
         )}
       >
-        {exporting === 'pdf' ? '⟳ PDF' : '↓ PDF'}
+        {exporting === 'pdf' ? t('export.pdfLoading') : t('export.pdf')}
       </button>
 
       {error && (
