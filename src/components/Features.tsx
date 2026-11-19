@@ -3,9 +3,14 @@
  * Static feature descriptions rendered on server
  */
 
+const FEATURE_STATS = [
+  { label: "Security", value: "Non-custodial" },
+  { label: "Coverage", value: "Global" },
+] as const;
+
 export default function Features() {
   return (
-    <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+    <section className="features-section grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
       <div className="racing-border-wrapper rounded-[1.75rem]">
         <div className="racing-border-content flex h-full flex-col justify-between rounded-[calc(1.75rem-2px)] border border-line/70 p-6 sm:p-8">
           <div className="space-y-4">
@@ -23,20 +28,18 @@ export default function Features() {
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-line/80 bg-bg/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted">Security</p>
-              <p className="mt-3 font-space-grotesk text-base text-text">Non-custodial</p>
-            </div>
-            <div className="rounded-2xl border border-line/80 bg-bg/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted">Coverage</p>
-              <p className="mt-3 font-space-grotesk text-base text-text">Global</p>
-            </div>
+            {FEATURE_STATS.map((stat) => (
+              <div key={stat.label} className="feature-stat-card rounded-2xl border border-line/80 bg-bg/70 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted">{stat.label}</p>
+                <p className="mt-3 font-space-grotesk text-base text-text">{stat.value}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-6">
-        <div className="rounded-[1.75rem] border border-line/70 bg-panel/90 p-6">
+        <div className="feature-card rounded-[1.75rem] border border-line/70 bg-panel/90 p-6">
           <div className="flex items-center justify-between">
             <p className="font-space-grotesk text-lg font-medium text-text">Real-time Tracking</p>
             <div className="animate-spin-slow rounded-full border border-accent/40 p-2">
@@ -49,7 +52,7 @@ export default function Features() {
           </p>
         </div>
 
-        <div className="rounded-[1.75rem] border border-line/70 bg-bg/70 p-6">
+        <div className="feature-card rounded-[1.75rem] border border-line/70 bg-bg/70 p-6">
           <p className="font-space-grotesk text-lg font-medium text-text">Multi-Currency</p>
           <p className="mt-3 text-sm leading-7 text-muted">
             Support for USDC and USDT on Stellar, with conversion to multiple fiat currencies.

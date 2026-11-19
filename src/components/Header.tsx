@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { bpClasses } from '@/lib/breakpoints';
+import { Skeleton } from '@/components/ui';
 import { ThemeToggle } from './ThemeToggle';
 import { CopyButton } from './CopyButton';
 import { WalletModal } from './WalletModal';
@@ -156,7 +157,11 @@ export const Header = memo(function Header({
   return (
     <>
       <header
-        className={`w-full px-6 py-5 flex items-start justify-between gap-6 ${bpClasses.headerCollapseFlexCol} ${bpClasses.headerCollapseItemsStart}`}
+        className={cn(
+          'w-full px-6 py-5 flex items-start justify-between gap-6',
+          bpClasses.headerCollapseFlexCol,
+          bpClasses.headerCollapseItemsStart,
+        )}
         role="banner"
       >
         {/* Left: title + subtitle + FX chip */}
@@ -180,7 +185,12 @@ export const Header = memo(function Header({
         </div>
 
         {/* Right: notifications + wallet button + balances */}
-        <div className={`flex flex-col items-end gap-2 ${bpClasses.headerCollapseItemsStart}`}>
+        <div
+          className={cn(
+            'flex flex-col items-end gap-2',
+            bpClasses.headerCollapseItemsStart,
+          )}
+        >
           <div className="flex items-center gap-2">
             <LanguageSelector />
             <button
@@ -229,9 +239,18 @@ export const Header = memo(function Header({
           </div>
 
           {isConnected && (
-            <div className={`flex flex-col items-end gap-0.5 ${bpClasses.headerCollapseItemsStart}`}>
+            <div
+              className={cn(
+                'flex flex-col items-end gap-0.5',
+                bpClasses.headerCollapseItemsStart,
+              )}
+              data-testid="header-balances"
+            >
               {isBalanceLoading ? (
-                <span className="text-xs text-[#777777] tracking-widest">loading...</span>
+                <div className="flex flex-col items-end gap-0.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
               ) : (
                 <>
                   <span className="text-xs text-[#c9a962] tracking-wider">{usdcBalanceText}</span>

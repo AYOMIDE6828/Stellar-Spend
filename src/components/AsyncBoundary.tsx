@@ -72,7 +72,7 @@ export function ListLoadingState({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-12 bg-[#222222] rounded animate-pulse" />
+        <Skeleton key={i} className="h-12 rounded" />
       ))}
     </div>
   );
@@ -94,18 +94,7 @@ export function ListEmptyState({
   icon,
   action,
 }: EmptyStateProps) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 px-4">
-      {icon && (
-        <div className="mb-4 text-[#333333]" aria-hidden="true">
-          {icon}
-        </div>
-      )}
-      <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
-      <p className="text-xs text-[#777777] mb-4">{description}</p>
-      {action}
-    </div>
-  );
+  return <Empty title={title} description={description} icon={icon} action={action} />;
 }
 
 /**
