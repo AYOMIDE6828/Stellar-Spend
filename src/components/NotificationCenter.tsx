@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
@@ -11,7 +11,7 @@ import { useNotificationEvents } from './notification-center/NotificationCenterC
 
 export * from './notification-center/types';
 
-export function NotificationCenter({
+function NotificationCenterComponent({
   events,
   unreadCount,
   unreadBadgeText,
@@ -113,19 +113,32 @@ export function NotificationCenter({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleNotificationClick = (event: NotificationCenterEvent) => {
-    if (!event.read) {
-      onMarkAsRead(event.id);
-    }
-    if (event.link) {
-      router.push(event.link.href);
-      closePanel();
-    }
-  };
+  const handleNotificationClick = useCallback(
+    (event: NotificationCenterEvent) => {
+      if (!event.read) {
+        onMarkAsRead(event.id);
+      }
+      if (event.link) {
+        router.push(event.link.href);
+        setIsOpen(false);
+      }
+    },
+    [onMarkAsRead, router],
+  );
 
-  const handleTogglePanel = () => {
-    togglePanel();
-  };
+  const handleTogglePanel = useCallback(() => {
+    setIsOpen((prev) => !prev);
+  }, []);
+
+  const bellAriaLabel = useMemo(
+    () => `Notifications (${unreadCount} unread)`,
+    [unreadCount],
+  );
+
+  const unreadAriaLabel = useMemo(
+    () => `${unreadCount} unread notifications`,
+    [unreadCount],
+  );
 
   return (
     <div className="relative">
@@ -145,7 +158,7 @@ export function NotificationCenter({
       <button
         ref={buttonRef}
         onClick={handleTogglePanel}
-        aria-label={`Notifications (${unreadCount} unread)`}
+        aria-label={bellAriaLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         className={cn(
@@ -153,7 +166,7 @@ export function NotificationCenter({
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
           'rounded',
         )}
-        title={`Notifications (${unreadCount} unread)`}
+        title={bellAriaLabel}
       >
         {/* Bell Icon */}
         <Icon name="bell" size={20} />
@@ -166,7 +179,7 @@ export function NotificationCenter({
               'bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold',
               'flex items-center justify-center',
             )}
-            aria-label={`${unreadCount} unread notifications`}
+            aria-label={unreadAriaLabel}
           >
             {unreadBadgeText}
           </span>
@@ -188,4 +201,7 @@ export function NotificationCenter({
     </div>
   );
 }
+
+export const NotificationCenter = memo(NotificationCenterComponent);
+NotificationCenter.displayName = 'NotificationCenter';
 
