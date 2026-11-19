@@ -1,5 +1,6 @@
 import { fetchPaycrestQuote, buildQuote, type QuoteResult } from './offramp/utils/quote-fetcher';
 import { getCacheClient } from './cache';
+import { logger } from './logger';
 
 export interface ProviderQuote extends QuoteResult {
   provider: string;
@@ -150,6 +151,12 @@ async function fetchQuoteFromPaycrest(
     return result;
   } catch (error) {
     recordReliability('paycrest', false);
+    logger.warn('quote-aggregator: paycrest quote fetch failed', {
+      provider: 'paycrest',
+      currency,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      responseTime: Date.now() - start,
+    });
     return {
       destinationAmount: '0',
       rate: 0,
@@ -209,6 +216,12 @@ async function fetchQuoteFromAllbridge(
     return result;
   } catch (error) {
     recordReliability('allbridge', false);
+    logger.warn('quote-aggregator: allbridge quote fetch failed', {
+      provider: 'allbridge',
+      currency,
+      error: error instanceof Error ? error.message : 'Provider not available',
+      responseTime: Date.now() - start,
+    });
     return {
       destinationAmount: '0',
       rate: 0,
@@ -264,6 +277,83 @@ function getDegradedProviders(): string[] {
   );
 }
 
+/**
+ * Fetches a single provider quote with timeout + retry handling.
+ * Extracted from `aggregateQuotes` so it can be reused and unit-tested.
+ */
+export async function fetchProviderQuote(
+  provider: QuoteProvider,
+  receiveAmount: string,
+  currency: string,
+): Promise<ProviderQuote> {
+  const config = PROVIDER_CONFIGS[provider];
+
+  const fetchWithRetry = async (retriesLeft: number): Promise<ProviderQuote> => {
+    try {
+      const timeoutPromise = new Promise<ProviderQuote>((_, reject) =>
+        setTimeout(() => reject(new Error('Provider timeout')), config.timeout),
+      );
+
+      const strategy = getStrategyForProvider(provider);
+      const fetchPromise = strategy(receiveAmount, currency);
+
+      return await Promise.race([fetchPromise, timeoutPromise]);
+    } catch (error) {
+      if (retriesLeft > 0) {
+        return fetchWithRetry(retriesLeft - 1);
+      }
+      logger.warn('quote-aggregator: provider quote failed after retries', {
+        provider,
+        currency,
+        error: error instanceof Error ? error.message : 'Provider failed',
+      });
+      return {
+        destinationAmount: '0',
+        rate: 0,
+        currency,
+        bridgeFee: '0',
+        payoutFee: '0',
+        estimatedTime: 0,
+        provider,
+        success: false,
+        error: error instanceof Error ? error.message : 'Provider failed',
+        responseTime: config.timeout,
+        reliability: calculateReliability(config.reliabilityHistory),
+        netPayout: 0,
+      };
+    }
+  };
+
+  return fetchWithRetry(config.maxRetries);
+}
+
+/**
+ * Builds the aggregated response from a set of already-fetched provider quotes.
+ * Pure function (aside from the timestamp) so ranking/aggregation can be tested
+ * independently of network calls.
+ */
+export function buildAggregatedResponse(
+  allQuotes: ProviderQuote[],
+  totalProviders: number,
+): AggregatedQuoteResponse {
+  const bestQuote = selectBestQuote(allQuotes);
+
+  const successful = allQuotes.filter((q) => q.success);
+  const alternatives = allQuotes
+    .filter((q) => q.success && q.provider !== bestQuote?.provider)
+    .sort((a, b) => (b.netPayout ?? 0) - (a.netPayout ?? 0));
+
+  return {
+    bestQuote,
+    allQuotes,
+    alternatives,
+    timestamp: new Date().toISOString(),
+    totalProviders,
+    successfulProviders: successful.length,
+    degradedProviders: getDegradedProviders(),
+  };
+}
+
 export async function aggregateQuotes(
   receiveAmount: string,
   currency: string,
@@ -281,77 +371,21 @@ export async function aggregateQuotes(
   if (cached) {
     try {
       return JSON.parse(cached) as AggregatedQuoteResponse;
-    } catch {
-      // ignore cache parse errors
+    } catch (error) {
+      logger.warn('quote-aggregator: failed to parse cached quote', {
+        cacheKey,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 
-  const quotePromises = enabledProviders.map(async (provider) => {
-    const config = PROVIDER_CONFIGS[provider];
+  const allQuotes = await Promise.all(
+    enabledProviders.map((provider) => fetchProviderQuote(provider, receiveAmount, currency)),
+  );
 
-    const fetchWithRetry = async (retriesLeft: number): Promise<ProviderQuote> => {
-      try {
-        const timeoutPromise = new Promise<ProviderQuote>((_, reject) =>
-          setTimeout(() => reject(new Error('Provider timeout')), config.timeout),
-        );
-
-        const strategy = getStrategyForProvider(provider);
-        const fetchPromise = strategy(receiveAmount, currency);
-
-        return await Promise.race([fetchPromise, timeoutPromise]);
-      } catch (error) {
-        if (retriesLeft > 0) {
-          return fetchWithRetry(retriesLeft - 1);
-        }
-        return {
-          destinationAmount: '0',
-          rate: 0,
-          currency,
-          bridgeFee: '0',
-          payoutFee: '0',
-          estimatedTime: 0,
-          provider,
-          success: false,
-          error: error instanceof Error ? error.message : 'Provider failed',
-          responseTime: config.timeout,
-          reliability: calculateReliability(config.reliabilityHistory),
-          netPayout: 0,
-        };
-      }
-    };
-
-    return fetchWithRetry(config.maxRetries);
-  });
-
-  const allQuotes = await Promise.all(quotePromises);
-  const bestQuote = selectBestQuote(allQuotes);
-
-  const successful = allQuotes.filter((q) => q.success);
-  const alternatives = allQuotes
-    .filter((q) => q.success && q.provider !== bestQuote?.provider)
-    .sort((a, b) => (b.netPayout ?? 0) - (a.netPayout ?? 0));
-
-  const result: AggregatedQuoteResponse = {
-    bestQuote,
-    allQuotes,
-    alternatives,
-    timestamp: new Date().toISOString(),
-    totalProviders: enabledProviders.length,
-    successfulProviders: successful.length,
-    degradedProviders: getDegradedProviders(),
-  };
+  const result = buildAggregatedResponse(allQuotes, enabledProviders.length);
 
   await cacheClient.set(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS);
 
   return result;
-}
-
-function getProviderStatus(): Record<QuoteProvider, ProviderConfig> {
-  return PROVIDER_CONFIGS;
-}
-
-function resetReliabilityHistory(): void {
-  for (const config of Object.values(PROVIDER_CONFIGS)) {
-    config.reliabilityHistory = [];
-  }
 }

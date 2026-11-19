@@ -69,11 +69,6 @@ export const systemClock: Clock = {
   now: () => Date.now(),
 };
 
-/** Builds a fixed clock for tests — now() always returns the same instant. */
-function fixedClock(atMs: number): Clock {
-  return { now: () => atMs };
-}
-
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
@@ -100,7 +95,11 @@ export function computeNextRunAt(from: number, frequency: RecurringFrequency): n
   return d.getTime();
 }
 
-function isDue(schedule: RecurringSchedule, clock: Clock = systemClock): boolean {
+/**
+ * Whether a schedule is due for execution (or retry) at the given clock time.
+ * Exported so the execution service can reuse it without duplicating logic.
+ */
+export function isDue(schedule: RecurringSchedule, clock: Clock = systemClock): boolean {
   if (schedule.paused) return false;
   if (schedule.maxExecutions !== undefined && schedule.executionCount >= schedule.maxExecutions)
     return false;
