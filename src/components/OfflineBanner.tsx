@@ -53,6 +53,9 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
+      aria-atomic="true"
+      aria-busy={isSyncing}
+      data-testid="offline-banner"
       className="sticky top-0 z-50 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-semibold tracking-widest uppercase border-b"
       style={{
         backgroundColor: CHROME_TOKENS.surfaceElevated,
@@ -63,12 +66,12 @@ export default function OfflineBanner() {
       {isOffline ? (
         <>
           <span aria-hidden="true">{OFFLINE_BANNER_ICONS.offline}</span>
-          {OFFLINE_BANNER_MESSAGES.offline}
+          <span>{OFFLINE_BANNER_MESSAGES.offline}</span>
         </>
       ) : (
         <>
           <span aria-hidden="true">{OFFLINE_BANNER_ICONS.syncing}</span>
-          {OFFLINE_BANNER_MESSAGES.syncing}
+          <span>{OFFLINE_BANNER_MESSAGES.syncing}</span>
         </>
       )}
     </div>

@@ -5,6 +5,15 @@ const meta = {
   title: 'Components/AsyncBoundary',
   component: AsyncBoundary,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Unified async boundary. Handles loading, empty and error states for async content, ' +
+          'and catches render errors thrown by its children via the shared ErrorBoundary.',
+      },
+    },
+  },
 } satisfies Meta<typeof AsyncBoundary>;
 
 export default meta;
@@ -71,6 +80,36 @@ export const ErrorState: Story = {
     error: 'Failed to fetch transactions. Please try again.',
     errorContent: (error) => <ListErrorState error={error} onRetry={() => alert('Retrying...')} />,
     children: <SampleList />,
+  },
+};
+
+export const ErrorStateWithDefaultFallback: Story = {
+  args: {
+    isLoading: false,
+    isEmpty: false,
+    error: 'Failed to fetch transactions. Please try again.',
+    children: <SampleList />,
+  },
+};
+
+function ThrowingChild(): React.ReactElement {
+  throw new Error('Unexpected render failure');
+}
+
+export const CaughtRenderError: Story = {
+  args: {
+    isLoading: false,
+    isEmpty: false,
+    children: <ThrowingChild />,
+  },
+};
+
+export const CaughtRenderErrorWithCustomFallback: Story = {
+  args: {
+    isLoading: false,
+    isEmpty: false,
+    errorContent: (error) => <ListErrorState error={error} onRetry={() => alert('Retrying...')} />,
+    children: <ThrowingChild />,
   },
 };
 

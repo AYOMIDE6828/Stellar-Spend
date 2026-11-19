@@ -350,6 +350,11 @@ export async function performManualReconciliation(
         message: `Manual retry initiated for transaction ${action.transactionId}`,
       };
     } catch (err) {
+      logger.error(
+        'reconciliation.manual_retry_failed',
+        { transactionId: action.transactionId },
+        err,
+      );
       return {
         success: false,
         message: `Manual retry failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -407,7 +412,9 @@ async function cleanOldHistory(): Promise<void> {
   const sql = `DELETE FROM reconciliation_history WHERE run_at < NOW() - INTERVAL '90 days'`;
   try {
     await pool.query(sql);
-  } catch {}
+  } catch (err) {
+    logger.error('reconciliation.clean_history_failed', {}, err);
+  }
 }
 
 export async function getReconciliationHistory(): Promise<ReconciliationHistoryEntry[]> {
@@ -423,7 +430,8 @@ export async function getReconciliationHistory(): Promise<ReconciliationHistoryE
         alerts: row.alerts,
       }),
     );
-  } catch {
+  } catch (err) {
+    logger.error('reconciliation.fetch_daily_records_failed', {}, err);
     return [];
   }
 }
@@ -486,7 +494,8 @@ export async function fetchDailyRecords(): Promise<ReconciliationRecord[]> {
         currency: tx.currency,
         timestamp: new Date(tx.timestamp).toISOString(),
       }));
-  } catch {
+  } catch (err) {
+    logger.error('reconciliation.get_history_failed', {}, err);
     return [];
   }
 }

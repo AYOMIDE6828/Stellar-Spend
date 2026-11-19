@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useDashboardWallet } from '@/hooks/useDashboardWallet';
 import { useWebVitals } from '@/hooks/useWebVitals';
 import { useTranslations } from '@/lib/i18n';
-import Header from './Header';
-import { FormCard, type OfframpPayload, type QuoteResult } from './FormCard';
-import RightPanel from './RightPanel';
+import {
+  DashboardHeaderSection,
+  OfframpFormSection,
+  RightPanelSection,
+  useDashboardState,
+} from '@/features/dashboard';
 
 /** Simulated submission latency (ms) for the off-ramp flow. */
 const SUBMIT_DELAY_MS = 2000;
@@ -17,11 +20,11 @@ const DEMO_XLM_BALANCE = '567.89';
 
 /**
  * DashboardClient - Client Component
- * Handles wallet state and interactive form logic
+ * Thin composition shell that wires wallet state and dashboard feature modules.
  * Separated to allow server-rendered static content in main page
  */
 
-export default function DashboardClient() {
+function DashboardClient() {
   // Track Web Vitals
   useWebVitals();
 
@@ -30,23 +33,16 @@ export default function DashboardClient() {
   const { isConnected, isConnecting, walletAddress, resetKey, handleConnect, handleDisconnect } =
     useDashboardWallet();
 
-  // Shared state for FormCard <-> RightPanel sync
-  const [currentQuote, setCurrentQuote] = useState<QuoteResult | null>(null);
-  const [currentAmount, setCurrentAmount] = useState('');
-  const [currentCurrency, setCurrentCurrency] = useState('');
-
-  const handleSubmit = useCallback(
-    async (_payload: OfframpPayload) => {
-      // Implement actual submission logic
-      await new Promise((resolve) => setTimeout(resolve, SUBMIT_DELAY_MS));
-      alert(t('offrampSuccess'));
-    },
-    [t],
-  );
+  const {
+    handleSubmit,
+    handleQuoteChange,
+    handleAmountChange,
+    handleCurrencyChange,
+  } = useDashboardState();
 
   return (
     <>
-      <Header
+      <DashboardHeaderSection
         subtitle={t('subtitle')}
         isConnected={isConnected}
         isConnecting={isConnecting}
@@ -59,18 +55,20 @@ export default function DashboardClient() {
       />
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
-        <FormCard
+        <OfframpFormSection
           isConnected={isConnected}
           isConnecting={isConnecting}
           resetKey={resetKey}
           onConnect={handleConnect}
           onSubmit={handleSubmit}
-          onQuoteChange={setCurrentQuote}
-          onAmountChange={setCurrentAmount}
-          onCurrencyChange={setCurrentCurrency}
+          onQuoteChange={handleQuoteChange}
+          onAmountChange={handleAmountChange}
+          onCurrencyChange={handleCurrencyChange}
         />
-        <RightPanel quote={currentQuote} amount={currentAmount} currency={currentCurrency} />
+        <RightPanelSection />
       </section>
     </>
   );
 }
+
+export default memo(DashboardClient);

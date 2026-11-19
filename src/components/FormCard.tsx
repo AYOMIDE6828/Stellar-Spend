@@ -43,7 +43,6 @@ const ERROR_MESSAGE_CLASSES = 'text-[10px] text-red-400 tracking-wide';
 const SECTION_CLASSES = 'flex flex-col gap-6';
 const CARD_CLASSES = 'bg-[#111111] border border-[#333333] p-6 flex flex-col gap-6';
 const GRID_CLASSES = `grid grid-cols-1 ${bpClasses.gridTwoCols} gap-4`;
-=======
 
 export function FormCard(props: FormCardProps) {
   const {
@@ -127,7 +126,12 @@ export function FormCard(props: FormCardProps) {
   };
 
   return (
-    <section className={SECTION_CLASSES} onKeyDown={handleKeyDown}>
+    <section
+      className={SECTION_CLASSES}
+      onKeyDown={handleKeyDown}
+      aria-label="Off-ramp form"
+      aria-busy={isSubmitting}
+    >
       <div className={CARD_CLASSES}>
         <InputField
           label={t('amountLabel')}
@@ -146,6 +150,7 @@ export function FormCard(props: FormCardProps) {
           }
           touched={touchedFields['amount']}
           disabled={!isConnected || isSubmitting}
+          aria-describedby="amount-error"
         />
 
         <FeeMethodSelector
@@ -202,10 +207,16 @@ export function FormCard(props: FormCardProps) {
           iban={iban}
           onIbanChange={setIban}
           disabled={!institution || !isConnected || isSubmitting}
+          aria-describedby={verifyError ? 'verify-error' : undefined}
         />
 
         {verifyError && (
-          <span role="alert" data-testid="error-message" className={ERROR_MESSAGE_CLASSES}>
+          <span
+            id="verify-error"
+            role="alert"
+            data-testid="error-message"
+            className={ERROR_MESSAGE_CLASSES}
+          >
             {verifyError}
           </span>
         )}
@@ -234,9 +245,11 @@ export function FormCard(props: FormCardProps) {
         />
 
         <button
+          type="button"
           onClick={ctaState === 'disconnected' ? onConnect : () => void submitOfframp()}
           disabled={ctaDisabled}
           aria-label={getCtaLabel(ctaState)}
+          aria-busy={ctaState === 'connecting' || ctaState === 'submitting'}
           data-testid="offramp-cta-button"
           className={cn(
             CTA_BASE_CLASSES,
@@ -252,4 +265,3 @@ export function FormCard(props: FormCardProps) {
     </section>
   );
 }
-

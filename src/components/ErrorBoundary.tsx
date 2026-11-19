@@ -10,10 +10,26 @@ const ERROR_BOUNDARY_NAMESPACE = 'ErrorBoundary';
 const MIN_HEIGHT_PX = 200;
 const FALLBACK_ERROR_MESSAGE_KEY = 'unexpectedError';
 
-interface Props {
+export interface ErrorBoundaryProps {
   children: ReactNode;
+  /** Custom fallback rendered when an error is caught. */
   fallback?: ReactNode;
+  /** Called when an error is caught, before the fallback is rendered. */
   onError?: (error: Error, info: ErrorInfo) => void;
+  /** When true, renders `loadingContent` instead of children. */
+  isLoading?: boolean;
+  /** When true (and not loading/erroring), renders `emptyContent`. */
+  isEmpty?: boolean;
+  /** Externally supplied error (e.g. from a data fetch). */
+  error?: Error | null;
+  /** Content rendered while `isLoading` is true. */
+  loadingContent?: ReactNode;
+  /** Content rendered while `isEmpty` is true. */
+  emptyContent?: ReactNode;
+  /** Content rendered when `error` is set or an error is caught. */
+  errorContent?: ReactNode;
+  /** Optional className applied to the default state containers. */
+  className?: string;
 }
 
 interface State {
@@ -22,7 +38,10 @@ interface State {
   eventId: string | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+const DEFAULT_CONTAINER_CLASS =
+  'flex flex-col items-center justify-center min-h-[200px] p-8 text-center gap-4';
+
+export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   state: State = { hasError: false, error: null, eventId: null };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -48,19 +67,60 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  render() {
-    if (!this.state.hasError) return this.props.children;
-
+  private renderError(error: Error | null) {
+    if (this.props.errorContent) return this.props.errorContent;
     if (this.props.fallback) return this.props.fallback;
 
     return (
       <ErrorFallback
-        error={this.state.error}
+        error={error}
         eventId={this.state.eventId}
         onReset={this.handleReset}
         onReport={this.handleReport}
+        className={this.props.className}
       />
     );
+  }
+
+  render() {
+    const { isLoading, isEmpty, error, loadingContent, emptyContent } = this.props;
+
+    if (this.state.hasError) {
+      return this.renderError(this.state.error);
+    }
+
+    if (error) {
+      return this.renderError(error);
+    }
+
+    if (isLoading) {
+      return (
+        loadingContent ?? (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`${DEFAULT_CONTAINER_CLASS} ${this.props.className ?? ''}`.trim()}
+          >
+            <p className="text-[#888] text-sm">Loading…</p>
+          </div>
+        )
+      );
+    }
+
+    if (isEmpty) {
+      return (
+        emptyContent ?? (
+          <div
+            role="status"
+            className={`${DEFAULT_CONTAINER_CLASS} ${this.props.className ?? ''}`.trim()}
+          >
+            <p className="text-[#888] text-sm">Nothing to show</p>
+          </div>
+        )
+      );
+    }
+
+    return this.props.children;
   }
 }
 
@@ -69,16 +129,17 @@ interface ErrorFallbackProps {
   eventId: string | null;
   onReset: () => void;
   onReport: () => void;
+  className?: string;
 }
 
-function ErrorFallback({ error, eventId, onReset, onReport }: ErrorFallbackProps) {
+function ErrorFallback({ error, eventId, onReset, onReport, className }: ErrorFallbackProps) {
   const t = useTranslations(ERROR_BOUNDARY_NAMESPACE);
 
   return (
     <div
       role="alert"
       style={{ minHeight: MIN_HEIGHT_PX }}
-      className="flex flex-col items-center justify-center p-8 border border-red-500/30 bg-red-500/5 text-center gap-4"
+      className={`flex flex-col items-center justify-center p-8 border border-red-500/30 bg-red-500/5 text-center gap-4 ${className ?? ''}`.trim()}
     >
       <p className="text-red-400 font-medium">{t('title')}</p>
       <p className="text-[#888] text-sm max-w-sm">

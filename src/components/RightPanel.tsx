@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import { QuoteDisplaySkeleton } from './skeletons';
 import { useFxRate } from '@/hooks/useFxRate';
@@ -26,35 +27,44 @@ const PLATFORM_FEE_FALLBACK_PERCENT = '0.35%';
 /** Placeholder shown while the quote is loading. */
 const LOADING_PLACEHOLDER = '...';
 
-export default function RightPanel(props: RightPanelProps) {
+function RightPanel(props: RightPanelProps) {
   const { quote, isConnected, isLoadingQuote, currency } = props;
   const { rate: liveRate, flash } = useFxRate();
   const t = useTranslations();
 
+  const amountValue = useMemo(() => parseFloat(props.amount), [props.amount]);
+
+  const platformFeeUsdc = useMemo(
+    () =>
+      quote && amountValue > 0
+        ? `${(amountValue * PLATFORM_FEE_RATE).toFixed(PLATFORM_FEE_DECIMALS)} USDC`
+        : PLATFORM_FEE_FALLBACK_PERCENT,
+    [quote, amountValue],
+  );
+
+  const effectiveRate = liveRate ?? quote?.rate ?? null;
+
+  const liveDestination = useMemo(
+    () =>
+      effectiveRate && props.amount && amountValue > 0
+        ? (amountValue * effectiveRate).toFixed(DESTINATION_DECIMALS)
+        : null,
+    [effectiveRate, props.amount, amountValue],
+  );
+
+  const payoutTotal = useMemo(
+    () =>
+      isConnected && (liveDestination || quote) && amountValue > 0
+        ? formatFiat(liveDestination ?? quote!.destinationAmount, currency || quote!.currency)
+        : isLoadingQuote
+          ? LOADING_PLACEHOLDER
+          : t('rightPanel.payoutEmpty', { currency: currency.toUpperCase() }),
+    [isConnected, liveDestination, quote, amountValue, currency, isLoadingQuote, t],
+  );
+
   if (isLoadingQuote && !quote) {
     return <QuoteDisplaySkeleton />;
   }
-
-  const parsedAmount = parseFloat(props.amount);
-  const hasAmount = parsedAmount > 0;
-
-  const platformFeeUsdc =
-    quote && hasAmount
-      ? `${(parsedAmount * PLATFORM_FEE_RATE).toFixed(PLATFORM_FEE_DECIMALS)} USDC`
-      : PLATFORM_FEE_FALLBACK_PERCENT;
-
-  const effectiveRate = liveRate ?? quote?.rate ?? null;
-  const liveDestination =
-    effectiveRate && props.amount && hasAmount
-      ? (parsedAmount * effectiveRate).toFixed(DESTINATION_DECIMALS)
-      : null;
-
-  const payoutTotal =
-    isConnected && (liveDestination || quote) && hasAmount
-      ? formatFiat(liveDestination ?? quote!.destinationAmount, currency || quote!.currency)
-      : isLoadingQuote
-        ? LOADING_PLACEHOLDER
-        : t('rightPanel.payoutEmpty', { currency: currency.toUpperCase() });
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -120,3 +130,5 @@ export default function RightPanel(props: RightPanelProps) {
     </div>
   );
 }
+
+export default memo(RightPanel);

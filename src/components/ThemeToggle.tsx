@@ -20,11 +20,21 @@ export function ThemeToggle() {
 
   const nextTheme = NEXT_THEME[theme];
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      toggleTheme();
+    }
+  };
+
   return (
     <button
+      type="button"
       onClick={toggleTheme}
+      onKeyDown={handleKeyDown}
       className="theme-toggle p-2 border border-line hover:border-accent transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
       aria-label={t('themeToggle.ariaLabel', { next: nextTheme, current: theme })}
+      aria-pressed={theme !== 'light'}
       title={t('themeToggle.title', { next: nextTheme })}
       data-theme-icon={theme}
     >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useClipboard } from '@/hooks/useClipboard';
 import { useToast } from '@/contexts/NotificationProvider';
 import { Icon } from '@/components/Icon';
@@ -15,6 +15,8 @@ interface CopyButtonProps {
   className?: string;
   /** Optional keyboard shortcut (e.g. "c" triggers on Ctrl+Shift+C / Cmd+Shift+C) */
   keyboardShortcut?: string;
+  /** When true, only the icon is rendered (label is still exposed to assistive tech) */
+  iconOnly?: boolean;
 }
 
 export function CopyButton({
@@ -22,6 +24,7 @@ export function CopyButton({
   label,
   className = '',
   keyboardShortcut,
+  iconOnly = false,
 }: CopyButtonProps) {
   const { isCopied, copy } = useClipboard();
   const { showToast } = useToast();
@@ -29,14 +32,14 @@ export function CopyButton({
 
   const resolvedLabel = label ?? t('copyButton.label');
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     const success = await copy(text);
     if (success) {
       showToast(t('copyButton.success'), 'success');
     } else {
       showToast(t('copyButton.error'), 'error');
     }
-  };
+  }, [copy, text, showToast]);
 
   // Register optional keyboard shortcut (Ctrl/Cmd + Shift + key)
   useEffect(() => {
@@ -52,18 +55,18 @@ export function CopyButton({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyboardShortcut, text]);
+  }, [keyboardShortcut, handleCopy]);
+
+  const accessibleLabel = isCopied
+    ? t('copyButton.copiedAria')
+    : t('copyButton.ariaLabel', { label: resolvedLabel, text });
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs border border-line hover:border-accent transition-colors rounded ${className}`}
-      aria-label={
-        isCopied
-          ? t('copyButton.copiedAria')
-          : t('copyButton.ariaLabel', { label: resolvedLabel, text })
-      }
+      className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs border border-line hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 transition-colors rounded ${className}`}
+      aria-label={accessibleLabel}
       title={
         isCopied
           ? t('copyButton.copiedAria')
@@ -75,11 +78,13 @@ export function CopyButton({
       }
     >
       {isCopied ? (
-        <Icon name="copy-check" size={COPY_ICON_SIZE} className="text-accent" />
+        <Icon name="copy-check" size={COPY_ICON_SIZE} className="text-accent" aria-hidden="true" />
       ) : (
-        <Icon name="copy" size={COPY_ICON_SIZE} />
+        <Icon name="copy" size={COPY_ICON_SIZE} aria-hidden="true" />
       )}
-      <span>{isCopied ? t('copyButton.copied') : resolvedLabel}</span>
+      {!iconOnly && (
+        <span aria-hidden="true">{isCopied ? t('copyButton.copied') : resolvedLabel}</span>
+      )}
     </button>
   );
 }

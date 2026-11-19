@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
@@ -8,6 +8,7 @@ import { useTranslations } from '@/lib/i18n';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
 import type { NotificationCenterProps } from './notification-center/types';
 import { NotificationPanel } from './notification-center/NotificationPanel';
+import { useNotificationEvents } from './notification-center/NotificationCenterContext';
 
 export * from './notification-center/types';
 
@@ -15,7 +16,7 @@ const BELL_ICON_SIZE = 20;
 const ANNOUNCEMENT_CLEAR_DELAY_MS = 2000;
 const NOTIFICATION_ITEM_BUTTON_SELECTOR = 'li button:first-of-type';
 
-export function NotificationCenter({
+function NotificationCenterComponent({
   events,
   unreadCount,
   unreadBadgeText,
@@ -25,42 +26,37 @@ export function NotificationCenter({
   onRemoveEvent,
   onClearAll,
 }: NotificationCenterProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
-  // Tracks newly arrived notification titles to announce via the aria-live region
-  const [announcement, setAnnouncement] = useState<string>('');
-  const prevEventIdsRef = useRef<Set<string>>(new Set());
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const t = useTranslations('notificationCenter');
 
-  // Announce new notifications to screen readers via aria-live polite
-  useEffect(() => {
-    const newEvents = events.filter((e) => !prevEventIdsRef.current.has(e.id));
-    if (newEvents.length > 0) {
-      const titles = newEvents.map((e) => e.title).join(', ');
-      if (newEvents.length === 1) {
-        setAnnouncement(t('announcement.single', { titles }));
-      } else {
-        setAnnouncement(t('announcement.multiple', { count: newEvents.length, titles }));
-      }
-    }
-    prevEventIdsRef.current = new Set(events.map((e) => e.id));
-  }, [events, t]);
+  // All panel/announcement/focus state lives in the shared notification context.
+  // Props remain the source of truth for backwards compatibility.
+  const {
+    isOpen,
+    focusedIndex,
+    announcement,
+    togglePanel,
+    closePanel,
+    setFocusedIndex,
+  } = useNotificationEvents({ events });
 
-  // Clear announcement after a short delay so it can fire again on subsequent updates
+  // Move focus into the panel when it opens, and restore focus to the bell
+  // button when it closes (e.g. via Escape or outside click).
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (!announcement) return;
-    const timer = setTimeout(() => setAnnouncement(''), ANNOUNCEMENT_CLEAR_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [announcement]);
-
-  // Reset focused index whenever the panel opens or the event list changes
-  useEffect(() => {
-    if (!isOpen) {
-      setFocusedIndex(-1);
+    if (isOpen && !wasOpenRef.current) {
+      // Focus the first focusable element inside the panel on open
+      const panel = panelRef.current;
+      const firstFocusable = panel?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    } else if (!isOpen && wasOpenRef.current) {
+      buttonRef.current?.focus();
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen]);
 
   // Focus the correct notification button when focusedIndex changes
@@ -83,13 +79,13 @@ export function NotificationCenter({
         !panelRef.current.contains(event.target as Node) &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        closePanel();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, closePanel]);
 
   // Handle keyboard navigation: Escape closes, Arrow Up/Down moves focus through items
   const handleKeyDown = useCallback(
@@ -97,7 +93,7 @@ export function NotificationCenter({
       if (!isOpen) return;
 
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        closePanel();
         buttonRef.current?.focus();
         return;
       }
@@ -132,7 +128,7 @@ export function NotificationCenter({
         setFocusedIndex(events.length - 1);
       }
     },
-    [isOpen, events.length],
+    [isOpen, events.length, closePanel, setFocusedIndex],
   );
 
   useEffect(() => {
@@ -140,19 +136,32 @@ export function NotificationCenter({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleNotificationClick = (event: NotificationCenterEvent) => {
-    if (!event.read) {
-      onMarkAsRead(event.id);
-    }
-    if (event.link) {
-      router.push(event.link.href);
-      setIsOpen(false);
-    }
-  };
+  const handleNotificationClick = useCallback(
+    (event: NotificationCenterEvent) => {
+      if (!event.read) {
+        onMarkAsRead(event.id);
+      }
+      if (event.link) {
+        router.push(event.link.href);
+        closePanel();
+      }
+    },
+    [onMarkAsRead, router, closePanel],
+  );
 
-  const handleTogglePanel = () => {
-    setIsOpen((prev) => !prev);
-  };
+  const handleTogglePanel = useCallback(() => {
+    togglePanel();
+  }, [togglePanel]);
+
+  const bellAriaLabel = useMemo(
+    () => t('bell.ariaLabel', { count: unreadCount }),
+    [t, unreadCount],
+  );
+
+  const unreadAriaLabel = useMemo(
+    () => t('badge.ariaLabel', { count: unreadCount }),
+    [t, unreadCount],
+  );
 
   return (
     <div className="relative">
@@ -161,6 +170,7 @@ export function NotificationCenter({
        * without interrupting the current reading flow.
        */}
       <div
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
@@ -172,15 +182,16 @@ export function NotificationCenter({
       <button
         ref={buttonRef}
         onClick={handleTogglePanel}
-        aria-label={t('bell.ariaLabel', { count: unreadCount })}
+        aria-label={bellAriaLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
+        aria-controls="notification-center-panel"
         className={cn(
           'relative p-2 text-[#777777] hover:text-[#c9a962] transition-colors',
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
           'rounded',
         )}
-        title={t('bell.title', { count: unreadCount })}
+        title={bellAriaLabel}
       >
         {/* Bell Icon */}
         <Icon name="bell" size={BELL_ICON_SIZE} />
@@ -193,7 +204,7 @@ export function NotificationCenter({
               'bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold',
               'flex items-center justify-center',
             )}
-            aria-label={t('badge.ariaLabel', { count: unreadCount })}
+            aria-label={unreadAriaLabel}
           >
             {unreadBadgeText}
           </span>
@@ -204,6 +215,7 @@ export function NotificationCenter({
       {isOpen && (
         <NotificationPanel
           ref={panelRef}
+          id="notification-center-panel"
           events={events}
           loading={loading}
           onNotificationClick={handleNotificationClick}
@@ -216,3 +228,5 @@ export function NotificationCenter({
   );
 }
 
+export const NotificationCenter = memo(NotificationCenterComponent);
+NotificationCenter.displayName = 'NotificationCenter';

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface BreakdownRowProps {
@@ -6,10 +7,16 @@ export interface BreakdownRowProps {
   muted?: boolean;
 }
 
-export function BreakdownRow({ label, value, muted }: BreakdownRowProps) {
+export const BreakdownRow = memo(function BreakdownRow({ label, value, muted }: BreakdownRowProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span className={cn('text-xs tracking-wider', muted ? 'text-[#777777]' : 'text-[#aaaaaa]')}>
+    <div
+      className="flex items-center justify-between gap-4"
+      role="group"
+      aria-label={`${label}: ${value}`}
+    >
+      <span
+        className={cn('text-xs tracking-wider', muted ? 'text-[#777777]' : 'text-[#aaaaaa]')}
+      >
         {label}
       </span>
       <span
@@ -22,4 +29,4 @@ export function BreakdownRow({ label, value, muted }: BreakdownRowProps) {
       </span>
     </div>
   );
-}
+});

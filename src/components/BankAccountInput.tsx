@@ -7,7 +7,7 @@ import {
   validateBankField,
   type BankFieldType,
   type ValidationResult,
-} from '@/lib/bank-validation';
+} from '@/lib/validation';
 
 interface BankFieldProps {
   type: BankFieldType;
@@ -83,6 +83,7 @@ export function BankField({ type, value, onChange, label, placeholder, disabled 
           maxLength={maxLength}
           disabled={disabled}
           aria-invalid={showError}
+          aria-required
           aria-describedby={showError ? `bank-field-${type}-error` : undefined}
           data-testid={type === 'account' ? 'account-number-input' : `bank-field-${type}-input`}
           className={cn(
@@ -91,12 +92,12 @@ export function BankField({ type, value, onChange, label, placeholder, disabled 
           )}
         />
         {showSuccess && (
-          <span className="text-success text-sm shrink-0" aria-hidden>
+          <span className="text-success text-sm shrink-0" aria-hidden="true">
             ✓
           </span>
         )}
         {showError && (
-          <span className="text-error text-sm shrink-0" aria-hidden>
+          <span className="text-error text-sm shrink-0" aria-hidden="true">
             ✕
           </span>
         )}
@@ -153,11 +154,40 @@ export function BankAccountInput({
   return (
     <div className="flex flex-col gap-3">
       {/* Mode tabs */}
-      <div className="flex gap-0 border-b border-line">
+      <div role="tablist" aria-label="Bank account format" className="flex gap-0 border-b border-line">
         {MODES.map((m) => (
           <button
             key={m}
+            type="button"
+            role="tab"
+            id={`bank-mode-tab-${m}`}
+            aria-selected={mode === m}
+            aria-controls={`bank-mode-panel-${m}`}
+            tabIndex={mode === m ? 0 : -1}
             onClick={() => onModeChange(m)}
+            onKeyDown={(e) => {
+              const modes: BankMode[] = ['local', 'us', 'iban'];
+              const idx = modes.indexOf(m);
+              if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const next =
+                  e.key === 'ArrowRight'
+                    ? modes[(idx + 1) % modes.length]
+                    : modes[(idx - 1 + modes.length) % modes.length];
+                onModeChange(next);
+                document.getElementById(`bank-mode-tab-${next}`)?.focus();
+              } else if (e.key === 'Home') {
+                e.preventDefault();
+                onModeChange(modes[0]);
+                document.getElementById(`bank-mode-tab-${modes[0]}`)?.focus();
+              } else if (e.key === 'End') {
+                e.preventDefault();
+                const last = modes[modes.length - 1];
+                onModeChange(last);
+                document.getElementById(`bank-mode-tab-${last}`)?.focus();
+              }
+            }}
+            disabled={disabled}
             className={cn(
               'text-[11px] px-3.5 py-1.5 border-0 border-b-2 bg-transparent cursor-pointer -mb-px tracking-[0.06em]',
               mode === m ? 'border-accent text-accent' : 'border-transparent text-muted',
@@ -169,40 +199,47 @@ export function BankAccountInput({
       </div>
 
       {/* Fields */}
-      {mode === 'local' && (
-        <BankField
-          type="account"
-          value={accountNumber}
-          onChange={onAccountNumberChange}
-          disabled={disabled}
-        />
-      )}
-
-      {mode === 'us' && (
-        <>
-          <BankField
-            type="routing"
-            value={routingNumber}
-            onChange={onRoutingNumberChange ?? (() => {})}
-            disabled={disabled}
-          />
+      <div
+        role="tabpanel"
+        id={`bank-mode-panel-${mode}`}
+        aria-labelledby={`bank-mode-tab-${mode}`}
+        className="flex flex-col gap-3"
+      >
+        {mode === 'local' && (
           <BankField
             type="account"
             value={accountNumber}
             onChange={onAccountNumberChange}
             disabled={disabled}
           />
-        </>
-      )}
+        )}
 
-      {mode === 'iban' && (
-        <BankField
-          type="iban"
-          value={iban}
-          onChange={onIbanChange ?? (() => {})}
-          disabled={disabled}
-        />
-      )}
+        {mode === 'us' && (
+          <>
+            <BankField
+              type="routing"
+              value={routingNumber}
+              onChange={onRoutingNumberChange ?? (() => {})}
+              disabled={disabled}
+            />
+            <BankField
+              type="account"
+              value={accountNumber}
+              onChange={onAccountNumberChange}
+              disabled={disabled}
+            />
+          </>
+        )}
+
+        {mode === 'iban' && (
+          <BankField
+            type="iban"
+            value={iban}
+            onChange={onIbanChange ?? (() => {})}
+            disabled={disabled}
+          />
+        )}
+      </div>
     </div>
   );
 }

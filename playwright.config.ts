@@ -35,6 +35,15 @@ export default defineConfig({
       testMatch: /(offline|i18n)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // Keyboard navigation / focus management suite (Issue #1434).
+      // Runs on chromium in CI to keep the matrix runtime bounded while
+      // still exercising modal focus trapping, focus restoration, form
+      // tab order and Escape-to-close flows.
+      name: 'keyboard-a11y',
+      testMatch: /keyboard-navigation\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: {
     command: 'npm run build && npm run start',
