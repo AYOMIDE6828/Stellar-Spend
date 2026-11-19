@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { env } from '@/lib/env';
-import { ErrorHandler } from '@/lib/error-handler';
-import { generateRequestId, createRequestLogger } from '@/lib/offramp';
+import { unauthorized, serverError } from '@/lib/api-errors';
+import { generateRequestId } from '@/lib/offramp';
 import { createNonceTable } from '@/lib/webhookVerify';
 import { withIdempotency } from '@/lib/idempotency';
 import { logger } from '@/lib/logger';
@@ -24,7 +24,7 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
   await createNonceTable().catch(() => {});
 
   const requestId = generateRequestId();
-  const reqLogger = createRequestLogger(requestId, 'POST', '/api/webhooks/paycrest');
+  const reqLogger = logger.withContext({ requestId });
 
   const rawBody = await request.text();
   const signature = request.headers.get('X-Paycrest-Signature') ?? '';
@@ -32,14 +32,12 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
   const nonce = request.headers.get('X-Paycrest-Nonce');
 
   if (!signature || !timestamp || !nonce) {
-    logger.warn('webhook.missing_headers', {
-      requestId,
+    reqLogger.warn('webhook.missing_headers', {
       hasSignature: !!signature,
       hasTimestamp: !!timestamp,
       hasNonce: !!nonce,
     });
-    reqLogger.logError(401, 'Missing required webhook headers');
-    return ErrorHandler.unauthorized('Missing required security headers');
+    return unauthorized('Missing required security headers');
   }
 
   // Create webhook system
@@ -64,8 +62,10 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
   );
 
   if (!verification.valid) {
-    reqLogger.logError(401, verification.reason ?? 'Invalid signature');
-    return ErrorHandler.unauthorized(verification.reason ?? 'Invalid signature');
+    reqLogger.warn('webhook.invalid_signature', {
+      reason: verification.reason ?? 'Invalid signature',
+    });
+    return unauthorized(verification.reason ?? 'Invalid signature');
   }
 
   // Enqueue for async processing (using existing webhook dispatcher)
@@ -78,7 +78,7 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
     },
     '/api/webhooks/paycrest/process',
   ).catch((err) => {
-    logger.error('webhook.enqueue_failed', { requestId }, err);
+    reqLogger.error('webhook.enqueue_failed', err);
   });
 
   try {
@@ -95,15 +95,17 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
 
     if (failedResults.length > 0) {
       const errors = failedResults.map(r => r.error).filter(Boolean);
-      logger.warn('webhook.partial_failure', {
-        requestId,
+      reqLogger.warn('webhook.partial_failure', {
         successful: successfulResults.length,
         failed: failedResults.length,
         errors,
       });
     }
 
-    reqLogger.logSuccess(200);
+    reqLogger.info('webhook.processed', {
+      processed: successfulResults.length,
+      failed: failedResults.length,
+    });
     return NextResponse.json({
       received: true,
       processed: successfulResults.length,
@@ -111,9 +113,8 @@ async function handleWebhook(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('webhook.processing_error', { requestId, error: errorMessage }, error);
-    reqLogger.logError(500, errorMessage);
-    return ErrorHandler.serverError('Failed to process webhook');
+    reqLogger.error('webhook.processing_error', error, { error: errorMessage });
+    return serverError('Failed to process webhook');
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { logger } from '@/lib/logger';
 import type { Transaction } from '@/lib/transaction-storage';
@@ -20,24 +20,16 @@ interface Props {
   walletAddress?: string;
 }
 
-/** Yield to the event loop so pending UI updates (spinner) can render. */
-function deferToNextTask(): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof setTimeout === 'function') {
-      setTimeout(resolve, 0);
-    } else {
-      resolve();
-    }
-  });
-}
-
-export default function ExportControls({ transactions, walletAddress }: Props) {
+function ExportControls({ transactions, walletAddress }: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const filtered = filterByDateRange(transactions, dateFrom, dateTo);
+  const filtered = useMemo(
+    () => filterByDateRange(transactions, dateFrom, dateTo),
+    [transactions, dateFrom, dateTo],
+  );
   const disabled = filtered.length === 0;
   const isExporting = exporting !== null;
 
@@ -180,3 +172,5 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
     </div>
   );
 }
+
+export default memo(ExportControls);
