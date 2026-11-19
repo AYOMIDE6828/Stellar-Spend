@@ -84,15 +84,29 @@ export function removeStoredItem(key: string): void {
   localStorage.removeItem(key);
 }
 
-const STORAGE_KEY = 'stellar_spend_transactions';
-const MAX_TRANSACTIONS = 50;
+export const TRANSACTIONS_STORAGE_KEY = 'stellar_spend_transactions';
+export const MAX_TRANSACTIONS = 50;
+
+/**
+ * Persist the full transaction list. Kept as a single write path so the
+ * transactions service and the legacy `TransactionStorage` class stay in sync.
+ */
+export function writeTransactions(transactions: Transaction[]): boolean {
+  return writeStoredJson(TRANSACTIONS_STORAGE_KEY, transactions.slice(0, MAX_TRANSACTIONS));
+}
+
+/** Read the persisted transaction list, tolerating missing/corrupt data. */
+export function readTransactions(): Transaction[] {
+  const stored = readStoredJson<unknown>(TRANSACTIONS_STORAGE_KEY, []);
+  return Array.isArray(stored) ? (stored as Transaction[]) : [];
+}
 
 export class TransactionStorage {
   static save(transaction: Transaction): void {
     if (typeof window === 'undefined') return;
     const all = this.getAll();
     all.unshift(transaction);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.slice(0, MAX_TRANSACTIONS)));
+    writeTransactions(all);
   }
 
   static update(id: string, updates: Partial<Transaction>): void {
@@ -101,24 +115,19 @@ export class TransactionStorage {
     const i = all.findIndex((tx) => tx.id === id);
     if (i !== -1) {
       all[i] = { ...all[i], ...updates };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      writeTransactions(all);
     }
   }
 
   static remove(id: string): void {
     if (typeof window === 'undefined') return;
     const all = this.getAll().filter((tx) => tx.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    writeTransactions(all);
   }
 
   static getAll(): Transaction[] {
     if (typeof window === 'undefined') return [];
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return readTransactions();
   }
 
   static getByUser(userAddress: string): Transaction[] {
@@ -130,8 +139,7 @@ export class TransactionStorage {
   }
 
   static clear(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(STORAGE_KEY);
+    removeStoredItem(TRANSACTIONS_STORAGE_KEY);
   }
 
   static updateNote(id: string, note: string): void {

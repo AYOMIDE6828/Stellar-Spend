@@ -1,23 +1,37 @@
-import { logger } from '@/lib/logger';
-('use client');
+'use client';
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { logger } from '@/lib/logger';
 import type { Transaction } from '@/lib/transaction-storage';
 import { exportCSV, exportPDF, exportJSON, exportXLSX, filterByDateRange } from '@/lib/export';
+
+/**
+ * Number of transactions above which we defer the export work to the next
+ * macrotask so the browser can paint the "exporting" state before the
+ * potentially long-running synchronous serialization begins.
+ */
+export const LARGE_EXPORT_THRESHOLD = 1000;
+
+type ExportFormat = 'csv' | 'pdf' | 'json' | 'xlsx';
 
 interface Props {
   transactions: Transaction[];
   walletAddress?: string;
 }
 
-export default function ExportControls({ transactions, walletAddress }: Props) {
+function ExportControls({ transactions, walletAddress }: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [exporting, setExporting] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = filterByDateRange(transactions, dateFrom, dateTo);
+  const filtered = useMemo(
+    () => filterByDateRange(transactions, dateFrom, dateTo),
+    [transactions, dateFrom, dateTo],
+  );
   const disabled = filtered.length === 0;
+  const isExporting = exporting !== null;
 
   const slug = walletAddress ? `${walletAddress.slice(0, 6)}_${walletAddress.slice(-4)}` : 'wallet';
   const dateTag = dateFrom || dateTo ? `_${dateFrom || 'start'}_to_${dateTo || 'end'}` : '';
@@ -28,9 +42,18 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
     'focus:outline-none focus:border-[#c9a962] [color-scheme:dark]',
   );
 
-  const handleExport = async (format: 'csv' | 'pdf' | 'json' | 'xlsx') => {
+  const handleExport = async (format: ExportFormat) => {
+    if (isExporting || disabled) return;
+
+    setError(null);
+    setExporting(format);
     try {
-      setExporting(format);
+      // For large exports, yield once so the spinner paints before the
+      // synchronous serialization blocks the main thread.
+      if (filtered.length >= LARGE_EXPORT_THRESHOLD) {
+        await deferToNextTask();
+      }
+
       switch (format) {
         case 'csv':
           exportCSV(filtered, `${basename}.csv`);
@@ -45,14 +68,15 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
           await exportXLSX(filtered, `${basename}.xlsx`);
           break;
       }
-    } catch (error) {
-      logger.error(`Export failed for ${format}:`, {}, error);
+    } catch (err) {
+      logger.error(`Export failed for ${format}:`, {}, err);
+      setError(`Export failed. Please try again.`);
     } finally {
       setExporting(null);
     }
   };
 
-  const buttonCls = (format: string) =>
+  const buttonCls = (format: ExportFormat) =>
     cn(
       'text-[10px] tracking-widest uppercase px-4 py-2 border transition-colors duration-150',
       'border-[#c9a962] text-[#c9a962]',
@@ -96,7 +120,7 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
       {/* CSV */}
       <button
         onClick={() => handleExport('csv')}
-        disabled={disabled || exporting !== null}
+        disabled={disabled || isExporting}
         aria-label="Export as CSV"
         data-testid="export-button"
         className={buttonCls('csv')}
@@ -107,7 +131,7 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
       {/* JSON */}
       <button
         onClick={() => handleExport('json')}
-        disabled={disabled || exporting !== null}
+        disabled={disabled || isExporting}
         aria-label="Export as JSON"
         className={buttonCls('json')}
       >
@@ -117,7 +141,7 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
       {/* XLSX */}
       <button
         onClick={() => handleExport('xlsx')}
-        disabled={disabled || exporting !== null}
+        disabled={disabled || isExporting}
         aria-label="Export as Excel"
         className={buttonCls('xlsx')}
       >
@@ -127,7 +151,7 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
       {/* PDF */}
       <button
         onClick={() => handleExport('pdf')}
-        disabled={disabled || exporting !== null}
+        disabled={disabled || isExporting}
         aria-label="Export as PDF"
         className={cn(
           'text-[10px] tracking-widest uppercase px-4 py-2 border transition-colors duration-150',
@@ -139,6 +163,14 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
       >
         {exporting === 'pdf' ? '⟳ PDF' : '↓ PDF'}
       </button>
+
+      {error && (
+        <span role="alert" className="text-[10px] text-red-400 whitespace-nowrap">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
+
+export default memo(ExportControls);

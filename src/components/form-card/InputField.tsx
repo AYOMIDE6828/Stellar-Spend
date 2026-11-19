@@ -2,6 +2,7 @@ import { ChangeEvent } from 'react';
 import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/Tooltip';
 import { Icon } from '@/components/Icon';
+import { getFieldState } from '@/lib/validation';
 
 export interface InputFieldProps {
   label: string;
@@ -38,8 +39,13 @@ export function InputField({
   help,
   validating,
 }: InputFieldProps) {
-  const showError = touched && !!error;
-  const showSuccess = touched && !error && !showError && !!success && !!value && !validating;
+  const { showError, showSuccess } = getFieldState({
+    error,
+    success,
+    touched,
+    value,
+    validating,
+  });
 
   return (
     <div className="flex flex-col gap-1.5">

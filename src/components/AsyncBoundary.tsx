@@ -3,8 +3,7 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
-import { Skeleton } from '@/components/Skeleton';
-import { Empty } from '@/components/Empty';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export interface AsyncBoundaryProps {
   isLoading: boolean;
@@ -48,29 +47,22 @@ export function AsyncBoundary({
   emptyClassName,
   errorClassName,
 }: AsyncBoundaryProps) {
-  if (isLoading && loadingContent) {
-    return (
-      <div className={cn('async-boundary-loading', loadingClassName, className)}>
-        {loadingContent}
-      </div>
-    );
-  }
-
-  if (error && errorContent) {
-    return (
-      <div role="alert" className={cn('async-boundary-error', errorClassName, className)}>
-        {errorContent(error)}
-      </div>
-    );
-  }
-
-  if (isEmpty && emptyContent) {
-    return (
-      <div className={cn('async-boundary-empty', emptyClassName, className)}>{emptyContent}</div>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <ErrorBoundary
+      isLoading={isLoading}
+      isEmpty={isEmpty}
+      error={error}
+      loadingContent={loadingContent}
+      emptyContent={emptyContent}
+      errorContent={errorContent}
+      className={className}
+      loadingClassName={loadingClassName}
+      emptyClassName={emptyClassName}
+      errorClassName={errorClassName}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 }
 
 /**
@@ -130,3 +122,5 @@ export function ListErrorState({ error, onRetry }: ErrorStateProps) {
     </div>
   );
 }
+
+export { ListLoadingState, ListEmptyState, ListErrorState };

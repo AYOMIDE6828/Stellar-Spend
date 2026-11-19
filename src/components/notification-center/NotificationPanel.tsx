@@ -5,29 +5,36 @@ import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
 import { AsyncBoundary, ListEmptyState, ListLoadingState } from '@/components/AsyncBoundary';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
+import { useNotificationCenterContext } from './NotificationCenterContext';
 import { NotificationItem } from './NotificationItem';
 
 export interface NotificationPanelProps {
-  events: NotificationCenterEvent[];
-  loading: boolean;
-  onNotificationClick: (event: NotificationCenterEvent) => void;
-  onMarkAllAsRead: () => void;
-  onRemoveEvent: (eventId: string) => void;
-  onClearAll: () => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  events?: NotificationCenterEvent[];
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  loading?: boolean;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onNotificationClick?: (event: NotificationCenterEvent) => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onMarkAllAsRead?: () => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onRemoveEvent?: (eventId: string) => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onClearAll?: () => void;
 }
 
 export const NotificationPanel = forwardRef<HTMLDivElement, NotificationPanelProps>(
-  function NotificationPanel(
-    {
-      events,
-      loading,
-      onNotificationClick,
-      onMarkAllAsRead,
-      onRemoveEvent,
-      onClearAll,
-    },
-    ref,
-  ) {
+  function NotificationPanel(props, ref) {
+    const context = useNotificationCenterContext();
+
+    // Props take precedence when explicitly provided so existing callers keep working.
+    const events = props.events ?? context.events;
+    const loading = props.loading ?? context.loading;
+    const onNotificationClick = props.onNotificationClick ?? context.onNotificationClick;
+    const onMarkAllAsRead = props.onMarkAllAsRead ?? context.onMarkAllAsRead;
+    const onRemoveEvent = props.onRemoveEvent ?? context.onRemoveEvent;
+    const onClearAll = props.onClearAll ?? context.onClearAll;
+
     return (
       <div
         ref={ref}
