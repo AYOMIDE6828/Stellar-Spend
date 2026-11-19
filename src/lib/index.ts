@@ -15,6 +15,9 @@ export * from './services';
 // Clients
 export * from './clients';
 
+// API client (centralized typed fetch wrapper)
+export * from './api/client';
+
 // Utilities
 export { logger } from './logger';
 export { cn } from './cn';
