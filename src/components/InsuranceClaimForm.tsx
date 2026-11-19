@@ -1,16 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { useForm } from '@/hooks/useForm';
-import { randomHexUpper } from '@/lib/crypto/ids';
-import { apiPatch } from '@/lib/api/client';
 import {
   type InsuranceClaimFormProps,
-  insuranceClaimSchema,
 } from './insurance-claim/types';
 import { ClaimFormHeader } from './insurance-claim/ClaimFormHeader';
 import { EligibilityState } from './insurance-claim/EligibilityState';
 import { ClaimFormFields } from './insurance-claim/ClaimFormFields';
+import { useInsuranceClaimForm } from '@/hooks/useInsuranceClaimForm';
 
 export * from './insurance-claim/types';
 
@@ -21,86 +17,24 @@ export function InsuranceClaimForm({
   onSuccess,
   onCancel,
 }: InsuranceClaimFormProps) {
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [isCheckingEligibility, setIsCheckingEligibility] = useState(true);
-  const [isEligible, setIsEligible] = useState<boolean | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-
   const {
     values,
-    isSubmitting: loading,
-    submitError,
-    errors,
+    error,
+    loading,
+    isCheckingEligibility,
+    isEligible,
+    selectedFile,
+    filePreview,
     setFieldValue,
-    setSubmitError,
-    handleSubmit: submitForm,
-  } = useForm({
-    initialValues: {
-      reason: '',
-      evidence: '',
-    },
-    schema: insuranceClaimSchema,
-    onSubmit: async (formValues) => {
-      if (!isEligible) return;
-
-      if (insuranceId.startsWith('ins_')) {
-        await new Promise((r) => setTimeout(r, 1000));
-        onSuccess(`CLAIM-${Date.now()}-${randomHexUpper(4)}`);
-        return;
-      }
-
-      const data = await apiPatch<{ claim?: { claim_id?: string; id?: string } }>(
-        `/api/transactions/${encodeURIComponent(transactionId)}/insurance`,
-        {
-          insuranceId,
-          reason: formValues.reason,
-          evidence: formValues.evidence || undefined,
-        },
-      );
-
-      const claimId = data?.claim?.claim_id ?? data?.claim?.id ?? 'CLAIM-FILED';
-      onSuccess(claimId);
-    },
+    setFileError,
+    handleFileSelect,
+    handleSubmit,
+  } = useInsuranceClaimForm({
+    transactionId,
+    insuranceId,
+    onSuccess,
+    onCancel,
   });
-
-  const error = fileError || submitError || errors.reason;
-
-  useEffect(() => {
-    const check = async () => {
-      setIsCheckingEligibility(true);
-      await new Promise((r) => setTimeout(r, 1500));
-      setIsEligible(true);
-      setIsCheckingEligibility(false);
-    };
-    check();
-  }, [insuranceId]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onCancel]);
-
-  const handleFileSelect = (file: File) => {
-    setFileError(null);
-    setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFilePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!values.reason || !isEligible) return;
-    setFileError(null);
-    setSubmitError(null);
-    await submitForm(e);
-  };
 
   return (
     <div
