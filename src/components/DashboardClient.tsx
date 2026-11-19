@@ -3,13 +3,16 @@
 import { useState, useCallback, memo } from 'react';
 import { useDashboardWallet } from '@/hooks/useDashboardWallet';
 import { useWebVitals } from '@/hooks/useWebVitals';
-import Header from './Header';
-import { FormCard, type OfframpPayload, type QuoteResult } from './FormCard';
-import RightPanel from './RightPanel';
+import {
+  DashboardHeaderSection,
+  OfframpFormSection,
+  RightPanelSection,
+  useDashboardState,
+} from '@/features/dashboard';
 
 /**
  * DashboardClient - Client Component
- * Handles wallet state and interactive form logic
+ * Thin composition shell that wires wallet state and dashboard feature modules.
  * Separated to allow server-rendered static content in main page
  */
 
@@ -17,10 +20,23 @@ function DashboardClient() {
   // Track Web Vitals
   useWebVitals();
 
-  const { isConnected, isConnecting, walletAddress, resetKey, handleConnect, handleDisconnect } =
-    useDashboardWallet();
+// src/features/dashboard/useDashboardState.ts
+'use client';
 
-  // Shared state for FormCard <-> RightPanel sync
+import { useState, useCallback } from 'react';
+import type { OfframpPayload, QuoteResult } from '@/components/FormCard';
+
+export interface DashboardState {
+  currentQuote: QuoteResult | null;
+  currentAmount: string;
+  currentCurrency: string;
+  handleSubmit: (payload: OfframpPayload) => Promise<void>;
+  handleQuoteChange: (quote: QuoteResult | null) => void;
+  handleAmountChange: (amount: string) => void;
+  handleCurrencyChange: (currency: string) => void;
+}
+
+export function useDashboardState(): DashboardState {
   const [currentQuote, setCurrentQuote] = useState<QuoteResult | null>(null);
   const [currentAmount, setCurrentAmount] = useState('');
   const [currentCurrency, setCurrentCurrency] = useState('');
@@ -45,20 +61,16 @@ function DashboardClient() {
 
   return (
     <>
-      <Header
-        subtitle="Off-Ramp USDC/USDT to Fiat"
+      <DashboardHeaderSection
         isConnected={isConnected}
         isConnecting={isConnecting}
         walletAddress={walletAddress}
-        stellarUsdcBalance={isConnected ? '1,234.56' : null}
-        stellarXlmBalance={isConnected ? '567.89' : null}
-        isBalanceLoading={false}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
       />
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
-        <FormCard
+        <OfframpFormSection
           isConnected={isConnected}
           isConnecting={isConnecting}
           resetKey={resetKey}
@@ -68,7 +80,6 @@ function DashboardClient() {
           onAmountChange={handleAmountChange}
           onCurrencyChange={handleCurrencyChange}
         />
-        <RightPanel quote={currentQuote} amount={currentAmount} currency={currentCurrency} />
       </section>
     </>
   );
