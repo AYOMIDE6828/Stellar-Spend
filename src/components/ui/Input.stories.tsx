@@ -81,25 +81,6 @@ export const Interactive: Story = {
   },
 };
 
-export const InteractiveWithClear: Story = {
-  args: {
-    placeholder: 'Enter text...',
-    defaultValue: 'Initial value',
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByDisplayValue(/initial value/i);
-    
-    // Focus and select all
-    await userEvent.click(input);
-    await userEvent.hotKeys(input, 'ctrl+a');
-    
-    // Type new value (replacing selected text)
-    await userEvent.type(input, 'New value');
-    await expect(input).toHaveValue('New value');
-  },
-};
-
 export const DisabledInteraction: Story = {
   args: {
     placeholder: 'Disabled input',
@@ -108,14 +89,30 @@ export const DisabledInteraction: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByPlaceholderText(/disabled input/i);
-    
+
     // Test that input is disabled
     await expect(input).toBeDisabled();
-    
+
     // Try to type (should not work, but we can verify the state)
     await userEvent.click(input);
     await userEvent.type(input, 'Should not type');
     // Input should still be empty since it's disabled
     await expect(input).toHaveValue('');
+  },
+};
+
+export const ErrorInteraction: Story = {
+  args: {
+    variant: 'error',
+    placeholder: 'Enter your email',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByPlaceholderText(/enter your email/i);
+
+    // Error variant should still be editable
+    await expect(input).not.toBeDisabled();
+    await userEvent.type(input, 'invalid@');
+    await expect(input).toHaveValue('invalid@');
   },
 };

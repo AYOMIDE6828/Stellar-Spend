@@ -5,6 +5,7 @@ import { SyncStorage } from '@/lib/sync-storage';
 import type { SyncSettings } from '@/lib/sync-storage';
 import { apiPost } from '@/lib/api/client';
 import { formatDateTime } from '@/lib/format';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 export interface UseSyncSettingsReturn {
   settings: SyncSettings;
@@ -25,6 +26,7 @@ export function useSyncSettings(userAddress?: string): UseSyncSettingsReturn {
   const [settings, setSettings] = useState<SyncSettings>(SyncStorage.getDefaultSettings());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isOnline = useOnlineStatus();
 
   // Load settings on mount
   useEffect(() => {
@@ -36,6 +38,11 @@ export function useSyncSettings(userAddress?: string): UseSyncSettingsReturn {
     async (enabled: boolean): Promise<boolean> => {
       if (!userAddress) {
         setError('User address is required');
+        return false;
+      }
+
+      if (!isOnline) {
+        setError('Cannot update sync settings while offline');
         return false;
       }
 
@@ -63,7 +70,7 @@ export function useSyncSettings(userAddress?: string): UseSyncSettingsReturn {
         setLoading(false);
       }
     },
-    [userAddress],
+    [userAddress, isOnline],
   );
 
   const queue = SyncStorage.getQueue();

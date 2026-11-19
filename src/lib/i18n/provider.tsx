@@ -30,6 +30,12 @@ interface I18nContextType {
   isRTL: boolean;
   /** True while a non-English locale bundle is being fetched. */
   localeLoading: boolean;
+  /**
+   * Translate a key with interpolation values, e.g.
+   * `t('greeting', { name: 'Ada' })`. Falls back to `t(key)` when the
+   * underlying instance does not support interpolation.
+   */
+  translate: (key: string, values?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -75,12 +81,28 @@ export function I18nProvider({
     [i18nInstance],
   );
 
+  const t = useCallback((key: string) => i18nInstance.t(key), [i18nInstance]);
+
+  const translate = useCallback(
+    (key: string, values?: Record<string, string | number>) => {
+      const instance = i18nInstance as I18n & {
+        tWithValues?: (k: string, v?: Record<string, string | number>) => string;
+      };
+      if (typeof instance.tWithValues === 'function') {
+        return instance.tWithValues(key, values);
+      }
+      return i18nInstance.t(key);
+    },
+    [i18nInstance],
+  );
+
   const value: I18nContextType = {
     language,
     setLanguage,
-    t: (key: string) => i18nInstance.t(key),
+    t,
     isRTL: i18nInstance.isRTL(),
     localeLoading,
+    translate,
   };
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

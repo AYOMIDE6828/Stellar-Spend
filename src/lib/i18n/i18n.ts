@@ -48,10 +48,35 @@ export class I18n {
 
   /**
    * Look up a dot-separated translation key such as `"common.loading"`.
-   * Falls back to the raw key string when the path cannot be resolved.
+   * Resolution order: active locale bundle, then the `en` fallback bundle,
+   * then the raw key string when the path cannot be resolved anywhere.
    */
   t(key: string): string {
-    const translations = this.loadedLocales[this.currentLanguage] ?? en;
+    const active = this.loadedLocales[this.currentLanguage];
+    const resolved = this.resolveKey(active, key);
+    if (resolved !== undefined) {
+      return resolved;
+    }
+
+    if (active !== en) {
+      const fallback = this.resolveKey(en, key);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+    }
+
+    return key;
+  }
+
+  /** Walk a dot-separated path in a bundle, returning `undefined` when missing. */
+  private resolveKey(
+    translations: TranslationKeys | undefined,
+    key: string
+  ): string | undefined {
+    if (!translations) {
+      return undefined;
+    }
+
     const keys = key.split('.');
     let value: unknown = translations;
 
@@ -59,11 +84,11 @@ export class I18n {
       if (value && typeof value === 'object' && !Array.isArray(value) && k in value) {
         value = (value as Record<string, unknown>)[k];
       } else {
-        return key;
+        return undefined;
       }
     }
 
-    return typeof value === 'string' ? value : key;
+    return typeof value === 'string' ? value : undefined;
   }
 
   getTranslations(): TranslationKeys {

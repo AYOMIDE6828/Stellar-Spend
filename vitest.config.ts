@@ -45,13 +45,13 @@ export default defineConfig({
       perFile: {
         lines: 85,
         functions: 85,
-        branches: 80,
+        branches: 85,
         statements: 85,
       },
       thresholdsForFile: {
         lines: 85,
         functions: 85,
-        branches: 80,
+        branches: 85,
         statements: 85,
         // Higher thresholds for security-critical modules
         'src/lib/offramp/**': {
@@ -78,12 +78,34 @@ export default defineConfig({
           branches: 75,
           statements: 80,
         },
+        // Shared components (offline handling, i18n, constants) must stay well covered
+        'src/components/**': {
+          lines: 85,
+          functions: 85,
+          branches: 85,
+          statements: 85,
+        },
+        // Single online-status hook used by OfflineBanner
+        'src/hooks/useOnlineStatus*': {
+          lines: 90,
+          functions: 90,
+          branches: 85,
+          statements: 90,
+        },
+        // i18n message catalogs and helpers
+        'src/i18n/**': {
+          lines: 85,
+          functions: 85,
+          branches: 85,
+          statements: 85,
+        },
       },
       exclude: [
         '**/node_modules/**',
         '**/e2e/**',
         '**/*.stories.*',
         '**/src/stories/**',
+        '**/.storybook/**',
         '.next/**',
         '**/src/test/setup.ts',
         '**/src/test/mocks/**',
@@ -102,7 +124,11 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
-        exclude: ['**/node_modules/**', '**/e2e/**']
+        include: [
+          'src/**/*.{test,spec}.{ts,tsx}',
+          'tests/**/*.{test,spec}.{ts,tsx}',
+        ],
+        exclude: ['**/node_modules/**', '**/e2e/**', '**/*.stories.*']
       }
     }, {
       extends: true,
@@ -114,6 +140,8 @@ export default defineConfig({
       })],
       test: {
         name: 'storybook',
+        // Pick up story files (including interaction tests) for shared components
+        include: ['src/**/*.stories.{ts,tsx}'],
         browser: {
           enabled: true,
           headless: true,

@@ -74,47 +74,75 @@ export const ErrorState: Story = {
   },
 };
 
-// LoadingState story
-export const LoadingStateMeta = {
-  default: {
-    args: {
-      rows: 5,
-    },
-  } satisfies StoryObj<typeof ListLoadingState>,
+// --- ListLoadingState stories ---
+
+const loadingMeta = {
+  title: 'Components/AsyncBoundary/ListLoadingState',
+  component: ListLoadingState,
+  tags: ['autodocs'],
+} satisfies Meta<typeof ListLoadingState>;
+
+type LoadingStory = StoryObj<typeof loadingMeta>;
+
+export const ListLoading: LoadingStory = {
+  render: (args) => <ListLoadingState {...args} />,
+  args: {
+    rows: 5,
+  },
 };
 
-// EmptyState story
-export const EmptyStateMeta = {
-  default: {
-    args: {
-      title: 'No items found',
-      description: 'Try adjusting your filters or create a new item',
-    },
-  } satisfies StoryObj<typeof ListEmptyState>,
-  withAction: {
-    args: {
-      title: 'No notifications yet',
-      description: 'You will see updates about your transactions here',
-      action: (
-        <button className="px-4 py-2 bg-[#c9a962] text-[#0a0a0a] text-xs font-semibold rounded">
-          Enable Notifications
-        </button>
-      ),
-    },
-  } satisfies StoryObj<typeof ListEmptyState>,
+// --- ListEmptyState stories ---
+
+const emptyMeta = {
+  title: 'Components/AsyncBoundary/ListEmptyState',
+  component: ListEmptyState,
+  tags: ['autodocs'],
+} satisfies Meta<typeof ListEmptyState>;
+
+type EmptyStory = StoryObj<typeof emptyMeta>;
+
+export const ListEmpty: EmptyStory = {
+  render: (args) => <ListEmptyState {...args} />,
+  args: {
+    title: 'No items found',
+    description: 'Try adjusting your filters or create a new item',
+  },
 };
 
-// ErrorState story
-export const ErrorStateMeta = {
-  default: {
-    args: {
-      error: 'Failed to load data',
-    },
-  } satisfies StoryObj<typeof ListErrorState>,
-  withRetry: {
-    args: {
-      error: 'Connection timeout. Please check your internet and try again.',
-      onRetry: () => alert('Retrying...'),
-    },
-  } satisfies StoryObj<typeof ListErrorState>,
+export const ListEmptyWithAction: EmptyStory = {
+  render: (args) => <ListEmptyState {...args} />,
+  args: {
+    title: 'No notifications yet',
+    description: 'You will see updates about your transactions here',
+    action: (
+      <button className="px-4 py-2 bg-[#c9a962] text-[#0a0a0a] text-xs font-semibold rounded">
+        Enable Notifications
+      </button>
+    ),
+  },
+};
+
+// --- ListErrorState stories ---
+
+const errorMeta = {
+  title: 'Components/AsyncBoundary/ListErrorState',
+  component: ListErrorState,
+  tags: ['autodocs'],
+} satisfies Meta<typeof ListErrorState>;
+
+type ErrorStory = StoryObj<typeof errorMeta>;
+
+export const ListError: ErrorStory = {
+  render: (args) => <ListErrorState {...args} />,
+  args: {
+    error: 'Failed to load data',
+  },
+};
+
+export const ListErrorWithRetry: ErrorStory = {
+  render: (args) => <ListErrorState {...args} />,
+  args: {
+    error: 'Connection timeout. Please check your internet and try again.',
+    onRetry: () => {},
+  },
 };

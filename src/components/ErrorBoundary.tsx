@@ -1,8 +1,14 @@
+'use client';
+
 import { logger } from '@/lib/logger';
-('use client');
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
+import { useTranslations } from 'next-intl';
+
+const ERROR_BOUNDARY_NAMESPACE = 'ErrorBoundary';
+const MIN_HEIGHT_PX = 200;
+const FALLBACK_ERROR_MESSAGE_KEY = 'unexpectedError';
 
 interface Props {
   children: ReactNode;
@@ -48,31 +54,52 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.props.fallback) return this.props.fallback;
 
     return (
-      <div
-        role="alert"
-        className="flex flex-col items-center justify-center min-h-[200px] p-8 border border-red-500/30 bg-red-500/5 text-center gap-4"
-      >
-        <p className="text-red-400 font-medium">Something went wrong</p>
-        <p className="text-[#888] text-sm max-w-sm">
-          {this.state.error?.message ?? 'An unexpected error occurred.'}
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={this.handleReset}
-            className="px-4 py-2 text-sm border border-[#333] text-[#ccc] hover:border-[#555] transition-colors"
-          >
-            Try again
-          </button>
-          {this.state.eventId && (
-            <button
-              onClick={this.handleReport}
-              className="px-4 py-2 text-sm border border-[#333] text-[#888] hover:border-[#555] transition-colors"
-            >
-              Report issue
-            </button>
-          )}
-        </div>
-      </div>
+      <ErrorFallback
+        error={this.state.error}
+        eventId={this.state.eventId}
+        onReset={this.handleReset}
+        onReport={this.handleReport}
+      />
     );
   }
+}
+
+interface ErrorFallbackProps {
+  error: Error | null;
+  eventId: string | null;
+  onReset: () => void;
+  onReport: () => void;
+}
+
+function ErrorFallback({ error, eventId, onReset, onReport }: ErrorFallbackProps) {
+  const t = useTranslations(ERROR_BOUNDARY_NAMESPACE);
+
+  return (
+    <div
+      role="alert"
+      style={{ minHeight: MIN_HEIGHT_PX }}
+      className="flex flex-col items-center justify-center p-8 border border-red-500/30 bg-red-500/5 text-center gap-4"
+    >
+      <p className="text-red-400 font-medium">{t('title')}</p>
+      <p className="text-[#888] text-sm max-w-sm">
+        {error?.message ?? t(FALLBACK_ERROR_MESSAGE_KEY)}
+      </p>
+      <div className="flex gap-3">
+        <button
+          onClick={onReset}
+          className="px-4 py-2 text-sm border border-[#333] text-[#ccc] hover:border-[#555] transition-colors"
+        >
+          {t('tryAgain')}
+        </button>
+        {eventId && (
+          <button
+            onClick={onReport}
+            className="px-4 py-2 text-sm border border-[#333] text-[#888] hover:border-[#555] transition-colors"
+          >
+            {t('reportIssue')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

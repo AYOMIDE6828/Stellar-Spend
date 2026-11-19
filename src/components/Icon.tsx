@@ -22,6 +22,9 @@ export interface IconProps {
   className?: string;
 }
 
+/** Default rendered icon size in pixels. */
+export const DEFAULT_ICON_SIZE = 16;
+
 const VIEW_BOX: Record<IconName, string> = {
   close: '0 0 16 16',
   'chevron-down': '0 0 24 24',
@@ -112,7 +115,7 @@ const CONTENT: Record<IconName, (strokeWidth: number) => ReactNode> = {
   ),
 };
 
-export function Icon({ name, size = 16, strokeWidth, className }: IconProps) {
+export function Icon({ name, size = DEFAULT_ICON_SIZE, strokeWidth, className }: IconProps) {
   const sw = strokeWidth ?? DEFAULT_STROKE_WIDTH[name];
   return (
     <svg

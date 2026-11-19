@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from '@/hooks/useForm';
 import { randomHexUpper } from '@/lib/crypto/ids';
 import { apiPatch } from '@/lib/api/client';
+import { useTranslations } from '@/hooks/useTranslations';
 import {
   type InsuranceClaimFormProps,
   insuranceClaimSchema,
@@ -13,6 +14,12 @@ import { EligibilityState } from './insurance-claim/EligibilityState';
 import { ClaimFormFields } from './insurance-claim/ClaimFormFields';
 
 export * from './insurance-claim/types';
+
+const MOCK_INSURANCE_ID_PREFIX = 'ins_';
+const MOCK_SUBMIT_DELAY_MS = 1000;
+const ELIGIBILITY_CHECK_DELAY_MS = 1500;
+const CLAIM_ID_FALLBACK = 'CLAIM-FILED';
+const CLAIM_ID_RANDOM_LENGTH = 4;
 
 export function InsuranceClaimForm({
   transactionId,
@@ -26,6 +33,7 @@ export function InsuranceClaimForm({
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const { t } = useTranslations();
 
   const {
     values,
@@ -44,9 +52,11 @@ export function InsuranceClaimForm({
     onSubmit: async (formValues) => {
       if (!isEligible) return;
 
-      if (insuranceId.startsWith('ins_')) {
-        await new Promise((r) => setTimeout(r, 1000));
-        onSuccess(`CLAIM-${Date.now()}-${randomHexUpper(4)}`);
+      if (insuranceId.startsWith(MOCK_INSURANCE_ID_PREFIX)) {
+        await new Promise((r) => setTimeout(r, MOCK_SUBMIT_DELAY_MS));
+        onSuccess(
+          `CLAIM-${Date.now()}-${randomHexUpper(CLAIM_ID_RANDOM_LENGTH)}`,
+        );
         return;
       }
 
@@ -59,7 +69,8 @@ export function InsuranceClaimForm({
         },
       );
 
-      const claimId = data?.claim?.claim_id ?? data?.claim?.id ?? 'CLAIM-FILED';
+      const claimId =
+        data?.claim?.claim_id ?? data?.claim?.id ?? CLAIM_ID_FALLBACK;
       onSuccess(claimId);
     },
   });
@@ -69,7 +80,7 @@ export function InsuranceClaimForm({
   useEffect(() => {
     const check = async () => {
       setIsCheckingEligibility(true);
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, ELIGIBILITY_CHECK_DELAY_MS));
       setIsEligible(true);
       setIsCheckingEligibility(false);
     };
@@ -107,6 +118,7 @@ export function InsuranceClaimForm({
       role="dialog"
       aria-modal="true"
       aria-labelledby="claim-form-title"
+      aria-label={t('insuranceClaim.dialogLabel')}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div

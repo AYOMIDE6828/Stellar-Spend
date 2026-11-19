@@ -11,6 +11,9 @@ import {
 const meta = {
   title: 'Design System/Skeletons',
   tags: ['autodocs'],
+  parameters: {
+    layout: 'padded',
+  },
 } satisfies Meta;
 
 export default meta;
@@ -64,6 +67,14 @@ export const BankAccountWithTwoFields: Story = {
   render: () => (
     <div className="max-w-md">
       <BankAccountInputSkeleton fields={2} />
+    </div>
+  ),
+};
+
+export const BankAccountWithThreeFields: Story = {
+  render: () => (
+    <div className="max-w-md">
+      <BankAccountInputSkeleton fields={3} />
     </div>
   ),
 };

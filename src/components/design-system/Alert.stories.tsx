@@ -57,6 +57,25 @@ export const NoTitle: Story = {
     variant: 'info',
     children: 'This is an alert without a title.',
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const content = canvas.getByText(/this is an alert without a title/i);
+    await expect(content).toBeInTheDocument();
+  },
+};
+
+export const TitleOnly: Story = {
+  args: {
+    variant: 'warning',
+    title: 'Title Only Alert',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const title = canvas.getByText(/title only alert/i);
+    await expect(title).toBeInTheDocument();
+  },
 };
 
 export const Interactive: Story = {
@@ -67,31 +86,32 @@ export const Interactive: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    
+
     // Test alert title is rendered
     const title = canvas.getByText(/alert rendered/i);
     await expect(title).toBeInTheDocument();
-    
+
     // Test alert body/content is rendered
     const content = canvas.getByText(/this is an interactive alert/i);
     await expect(content).toBeInTheDocument();
   },
 };
 
-export const VariantDisplay: Story = {
-  args: {
-    variant: 'error',
-    title: 'Error Alert',
-    children: 'An error has occurred. Please review and try again.',
-  },
+export const AllVariants: Story = {
+  render: (args) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <Alert {...args} variant="info" title="Info" children="Informational message." />
+      <Alert {...args} variant="success" title="Success" children="Success message." />
+      <Alert {...args} variant="warning" title="Warning" children="Warning message." />
+      <Alert {...args} variant="error" title="Error" children="Error message." />
+    </div>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    
-    // Test all parts render correctly
-    const title = canvas.getByText(/error alert/i);
-    const message = canvas.getByText(/an error has occurred/i);
-    
-    await expect(title).toBeInTheDocument();
-    await expect(message).toBeInTheDocument();
+
+    await expect(canvas.getByText(/informational message/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/success message/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/warning message/i)).toBeInTheDocument();
+    await expect(canvas.getByText(/error message/i)).toBeInTheDocument();
   },
 };

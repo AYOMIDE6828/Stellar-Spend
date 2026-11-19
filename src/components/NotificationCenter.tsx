@@ -4,11 +4,16 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
+import { useTranslations } from '@/lib/i18n';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
 import type { NotificationCenterProps } from './notification-center/types';
 import { NotificationPanel } from './notification-center/NotificationPanel';
 
 export * from './notification-center/types';
+
+const BELL_ICON_SIZE = 20;
+const ANNOUNCEMENT_CLEAR_DELAY_MS = 2000;
+const NOTIFICATION_ITEM_BUTTON_SELECTOR = 'li button:first-of-type';
 
 export function NotificationCenter({
   events,
@@ -28,6 +33,7 @@ export function NotificationCenter({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const t = useTranslations('notificationCenter');
 
   // Announce new notifications to screen readers via aria-live polite
   useEffect(() => {
@@ -35,19 +41,19 @@ export function NotificationCenter({
     if (newEvents.length > 0) {
       const titles = newEvents.map((e) => e.title).join(', ');
       if (newEvents.length === 1) {
-        setAnnouncement(`New notification: ${titles}`);
+        setAnnouncement(t('announcement.single', { titles }));
       } else {
-        setAnnouncement(`${newEvents.length} new notifications: ${titles}`);
+        setAnnouncement(t('announcement.multiple', { count: newEvents.length, titles }));
       }
     }
     prevEventIdsRef.current = new Set(events.map((e) => e.id));
-  }, [events]);
+  }, [events, t]);
 
   // Clear announcement after a short delay so it can fire again on subsequent updates
   useEffect(() => {
     if (!announcement) return;
-    const t = setTimeout(() => setAnnouncement(''), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setAnnouncement(''), ANNOUNCEMENT_CLEAR_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [announcement]);
 
   // Reset focused index whenever the panel opens or the event list changes
@@ -62,7 +68,7 @@ export function NotificationCenter({
     if (!isOpen || focusedIndex < 0) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const buttons = panel.querySelectorAll<HTMLButtonElement>('li button:first-of-type');
+    const buttons = panel.querySelectorAll<HTMLButtonElement>(NOTIFICATION_ITEM_BUTTON_SELECTOR);
     const target = buttons[focusedIndex];
     target?.focus();
   }, [focusedIndex, isOpen]);
@@ -166,7 +172,7 @@ export function NotificationCenter({
       <button
         ref={buttonRef}
         onClick={handleTogglePanel}
-        aria-label={`Notifications (${unreadCount} unread)`}
+        aria-label={t('bell.ariaLabel', { count: unreadCount })}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         className={cn(
@@ -174,10 +180,10 @@ export function NotificationCenter({
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
           'rounded',
         )}
-        title={`Notifications (${unreadCount} unread)`}
+        title={t('bell.title', { count: unreadCount })}
       >
         {/* Bell Icon */}
-        <Icon name="bell" size={20} />
+        <Icon name="bell" size={BELL_ICON_SIZE} />
 
         {/* Unread Badge */}
         {unreadCount > 0 && (
@@ -187,7 +193,7 @@ export function NotificationCenter({
               'bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold',
               'flex items-center justify-center',
             )}
-            aria-label={`${unreadCount} unread notifications`}
+            aria-label={t('badge.ariaLabel', { count: unreadCount })}
           >
             {unreadBadgeText}
           </span>
