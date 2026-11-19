@@ -23,6 +23,9 @@ export * from './error-handler';
 export * from './env';
 export * from './cors';
 
+// Request validation wrappers
+export * from './validation/validate-request';
+
 // Repositories
 export * from './repositories';
 
