@@ -11,11 +11,21 @@ export function ThemeToggle() {
     return 'dark';
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      toggleTheme();
+    }
+  };
+
   return (
     <button
+      type="button"
       onClick={toggleTheme}
+      onKeyDown={handleKeyDown}
       className="theme-toggle p-2 border border-line hover:border-accent transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
       aria-label={`Switch to ${getNextTheme()} mode. Current: ${theme}`}
+      aria-pressed={theme !== 'light'}
       title={`Switch to ${getNextTheme()} mode`}
       data-theme-icon={theme}
     >

@@ -33,6 +33,13 @@ export default function DashboardClient() {
 
   return (
     <>
+      <a
+        href="#offramp-form"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow"
+      >
+        Skip to off-ramp form
+      </a>
+
       <Header
         subtitle="Off-Ramp USDC/USDT to Fiat"
         isConnected={isConnected}
@@ -45,8 +52,12 @@ export default function DashboardClient() {
         onDisconnect={handleDisconnect}
       />
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+      <section
+        aria-label="Off-ramp dashboard"
+        className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]"
+      >
         <FormCard
+          id="offramp-form"
           isConnected={isConnected}
           isConnecting={isConnecting}
           resetKey={resetKey}

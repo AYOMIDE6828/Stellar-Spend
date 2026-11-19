@@ -40,6 +40,10 @@ export interface UseFormReturn<T extends Record<string, unknown>> {
   validateField: (field: keyof T) => string | undefined;
   handleSubmit: (e?: FormEvent) => Promise<boolean>;
   resetForm: (newValues?: Partial<T>) => void;
+  /** Alias for `resetForm` (backwards-compatible). */
+  reset: (newValues?: Partial<T>) => void;
+  /** Alias for `handleSubmit` (backwards-compatible). */
+  submit: (e?: FormEvent) => Promise<boolean>;
   getFieldProps: (field: keyof T) => {
     name: string;
     value: unknown;
@@ -61,6 +65,12 @@ export function parseZodErrors<T extends Record<string, unknown>>(
   return errors;
 }
 
+/**
+ * Standardized form hook.
+ *
+ * Returns a stable object of named fields. All previously exposed fields are
+ * preserved for backwards compatibility; new aliases are additive only.
+ */
 export function useForm<T extends Record<string, unknown>>({
   initialValues,
   schema,
@@ -284,6 +294,7 @@ export function useForm<T extends Record<string, unknown>>({
   );
 
   return {
+    // State
     values,
     errors,
     touched,
@@ -291,18 +302,25 @@ export function useForm<T extends Record<string, unknown>>({
     isValid,
     isDirty,
     submitError,
+    // Setters
     setValues,
     setFieldValue,
     setFieldError,
     setErrors,
     setFieldTouched,
     setSubmitError,
+    // Handlers
     handleChange,
     handleBlur,
+    handleSubmit,
+    // Validation
     validate,
     validateField,
-    handleSubmit,
+    // Utilities
     resetForm,
     getFieldProps,
+    // Backwards-compatible aliases
+    reset: resetForm,
+    submit: handleSubmit,
   };
 }

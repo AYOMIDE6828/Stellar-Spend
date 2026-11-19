@@ -42,6 +42,9 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
+      aria-atomic="true"
+      aria-busy={isSyncing}
+      data-testid="offline-banner"
       className="sticky top-0 z-50 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-semibold tracking-widest uppercase border-b"
       style={{
         backgroundColor: CHROME_TOKENS.surfaceElevated,
@@ -52,12 +55,12 @@ export default function OfflineBanner() {
       {isOffline ? (
         <>
           <span aria-hidden="true">⚠</span>
-          You&apos;re offline — showing cached data. Actions will sync when you reconnect.
+          <span>You&apos;re offline — showing cached data. Actions will sync when you reconnect.</span>
         </>
       ) : (
         <>
           <span aria-hidden="true">⟳</span>
-          Back online — syncing queued actions...
+          <span>Back online — syncing queued actions...</span>
         </>
       )}
     </div>

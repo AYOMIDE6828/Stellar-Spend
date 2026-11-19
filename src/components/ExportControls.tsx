@@ -1,7 +1,7 @@
-import { logger } from '@/lib/logger';
-('use client');
+'use client';
 
-import { useState } from 'react';
+import { logger } from '@/lib/logger';
+import { useId, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { Transaction } from '@/lib/transaction-storage';
 import { exportCSV, exportPDF, exportJSON, exportXLSX, filterByDateRange } from '@/lib/export';
@@ -15,6 +15,9 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [exporting, setExporting] = useState<string | null>(null);
+  const fromId = useId();
+  const toId = useId();
+  const statusId = useId();
 
   const filtered = filterByDateRange(transactions, dateFrom, dateTo);
   const disabled = filtered.length === 0;
@@ -62,13 +65,21 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
     );
 
   return (
-    <div className="border border-[#333333] bg-[#111111] p-4 flex flex-wrap items-center gap-3">
+    <div
+      role="group"
+      aria-label="Export transactions"
+      className="border border-[#333333] bg-[#111111] p-4 flex flex-wrap items-center gap-3"
+    >
       {/* Date range */}
       <div className="flex items-center gap-2">
-        <label className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap">
+        <label
+          htmlFor={fromId}
+          className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap"
+        >
           From
         </label>
         <input
+          id={fromId}
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
@@ -77,10 +88,14 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
         />
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap">
+        <label
+          htmlFor={toId}
+          className="text-[10px] text-[#777777] uppercase tracking-widest whitespace-nowrap"
+        >
           To
         </label>
         <input
+          id={toId}
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
@@ -89,15 +104,22 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
         />
       </div>
 
-      <span className="text-[10px] text-[#555555] whitespace-nowrap">
+      <span
+        id={statusId}
+        role="status"
+        aria-live="polite"
+        className="text-[10px] text-[#555555] whitespace-nowrap"
+      >
         {filtered.length} / {transactions.length} tx
       </span>
 
       {/* CSV */}
       <button
+        type="button"
         onClick={() => handleExport('csv')}
         disabled={disabled || exporting !== null}
         aria-label="Export as CSV"
+        aria-busy={exporting === 'csv'}
         data-testid="export-button"
         className={buttonCls('csv')}
       >
@@ -106,9 +128,11 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
 
       {/* JSON */}
       <button
+        type="button"
         onClick={() => handleExport('json')}
         disabled={disabled || exporting !== null}
         aria-label="Export as JSON"
+        aria-busy={exporting === 'json'}
         className={buttonCls('json')}
       >
         {exporting === 'json' ? '⟳ JSON' : '↓ JSON'}
@@ -116,9 +140,11 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
 
       {/* XLSX */}
       <button
+        type="button"
         onClick={() => handleExport('xlsx')}
         disabled={disabled || exporting !== null}
         aria-label="Export as Excel"
+        aria-busy={exporting === 'xlsx'}
         className={buttonCls('xlsx')}
       >
         {exporting === 'xlsx' ? '⟳ XLSX' : '↓ XLSX'}
@@ -126,9 +152,11 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
 
       {/* PDF */}
       <button
+        type="button"
         onClick={() => handleExport('pdf')}
         disabled={disabled || exporting !== null}
         aria-label="Export as PDF"
+        aria-busy={exporting === 'pdf'}
         className={cn(
           'text-[10px] tracking-widest uppercase px-4 py-2 border transition-colors duration-150',
           'border-[#777777] text-[#777777]',

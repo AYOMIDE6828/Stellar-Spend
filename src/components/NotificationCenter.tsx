@@ -57,6 +57,24 @@ export function NotificationCenter({
     }
   }, [isOpen]);
 
+  // Move focus into the panel when it opens, and restore focus to the bell
+  // button when it closes (e.g. via Escape or outside click).
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      // Focus the first focusable element inside the panel on open
+      const panel = panelRef.current;
+      const firstFocusable = panel?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    } else if (!isOpen && wasOpenRef.current) {
+      buttonRef.current?.focus();
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
+=======
+
   // Focus the correct notification button when focusedIndex changes
   useEffect(() => {
     if (!isOpen || focusedIndex < 0) return;
@@ -92,9 +110,35 @@ export function NotificationCenter({
 
       if (event.key === 'Escape') {
         setIsOpen(false);
-        buttonRef.current?.focus();
+        // Focus restoration is handled by the isOpen effect above
         return;
       }
+
+      if (event.key === 'Tab') {
+        // Keep focus trapped within the panel while it is open
+        const panel = panelRef.current;
+        if (!panel) return;
+        const focusable = Array.from(
+          panel.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => !el.hasAttribute('disabled'));
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (event.shiftKey) {
+          if (active === first || !panel.contains(active)) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else if (active === last) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
+      }
+=======
 
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -155,20 +199,25 @@ export function NotificationCenter({
        * without interrupting the current reading flow.
        */}
       <div
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
       >
         {announcement}
       </div>
+=======
 
       {/* Bell Button */}
       <button
         ref={buttonRef}
         onClick={handleTogglePanel}
+        type="button"
         aria-label={`Notifications (${unreadCount} unread)`}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
+        aria-controls="notification-center-panel"
+=======
         className={cn(
           'relative p-2 text-[#777777] hover:text-[#c9a962] transition-colors',
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
@@ -187,17 +236,19 @@ export function NotificationCenter({
               'bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold',
               'flex items-center justify-center',
             )}
-            aria-label={`${unreadCount} unread notifications`}
+            aria-hidden="true"
           >
             {unreadBadgeText}
           </span>
         )}
+=======
       </button>
 
       {/* Dropdown Panel */}
       {isOpen && (
         <NotificationPanel
           ref={panelRef}
+          id="notification-center-panel"
           events={events}
           loading={loading}
           onNotificationClick={handleNotificationClick}
@@ -206,6 +257,7 @@ export function NotificationCenter({
           onClearAll={onClearAll}
         />
       )}
+=======
     </div>
   );
 }

@@ -34,6 +34,39 @@ interface NotificationCenterState {
   error: string | null;
 }
 
+/**
+ * Public return shape of {@link useNotificationCenter}.
+ *
+ * All fields are named (no tuples) so consumers can destructure only what they
+ * need. Aliases are kept for backwards compatibility with earlier call sites.
+ */
+export interface UseNotificationCenterResult extends NotificationCenterState {
+  /** Mark a single event as read. */
+  markAsRead: (eventId: string) => void;
+  /** Mark every event as read. */
+  markAllAsRead: () => void;
+  /** Remove a single event by id. */
+  removeEvent: (eventId: string) => void;
+  /** Remove every event and clear persisted storage. */
+  clearAll: () => void;
+  /** Add or update an event (matched by id). */
+  addEvent: (event: NotificationCenterEvent) => void;
+  /** Convenience helper to record a tier change event. */
+  addTierChangeEvent: (tier: string, previousTier?: string) => void;
+  /** Ingest transaction delivery records as events. */
+  aggregateTransactionUpdates: (deliveries: NotificationDeliveryRecord[]) => void;
+  /** Ingest payout status updates as events. */
+  aggregatePayoutUpdates: (
+    transactions: Array<{ id: string; payoutStatus?: string; updatedAt: number }>,
+  ) => void;
+  /** Badge text for the unread count ("99+" above 99). */
+  unreadBadgeText: string;
+  /** Backwards-compatible alias for {@link unreadBadgeText}. */
+  badgeText: string;
+  /** Backwards-compatible alias for {@link unreadCount}. */
+  unread: number;
+}
+
 const STORAGE_KEY = 'stellar_spend_notification_center';
 const MAX_EVENTS = 100;
 
@@ -49,14 +82,13 @@ const MAX_EVENTS = 100;
  * Manages read/unread state with localStorage persistence.
  * Provides deep links to relevant contexts.
  */
-function useNotificationCenter(userAddress: string | null) {
+function useNotificationCenter(userAddress: string | null): UseNotificationCenterResult {
   const [state, setState] = useState<NotificationCenterState>({
     events: [],
     unreadCount: 0,
     loading: true,
     error: null,
   });
-
 
   // Load persisted events from localStorage
   const loadPersistedEvents = useCallback(() => {
@@ -377,7 +409,10 @@ function useNotificationCenter(userAddress: string | null) {
   const unreadBadgeText = state.unreadCount > 99 ? '99+' : String(state.unreadCount);
 
   return {
-    ...state,
+    events: state.events,
+    unreadCount: state.unreadCount,
+    loading: state.loading,
+    error: state.error,
     markAsRead,
     markAllAsRead,
     removeEvent,
@@ -387,5 +422,10 @@ function useNotificationCenter(userAddress: string | null) {
     aggregateTransactionUpdates,
     aggregatePayoutUpdates,
     unreadBadgeText,
+    // Backwards-compatible aliases
+    badgeText: unreadBadgeText,
+    unread: state.unreadCount,
   };
 }
+
+export default useNotificationCenter;

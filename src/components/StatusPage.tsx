@@ -98,9 +98,14 @@ export default function StatusPage() {
         </div>
 
         {/* Overall Status */}
-        <div className={cn('border p-6', getStatusColor(overallStatus))}>
+        <div
+          className={cn('border p-6', getStatusColor(overallStatus))}
+          role="status"
+          aria-live="polite"
+          aria-label={`Overall system status: ${getStatusText(overallStatus)}`}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-current animate-pulse" />
+            <div className="w-3 h-3 rounded-full bg-current animate-pulse" aria-hidden="true" />
             <div>
               <div className="text-lg font-semibold">{getStatusText(overallStatus)}</div>
               <div className="text-xs opacity-75">All systems are operating normally</div>
@@ -113,8 +118,14 @@ export default function StatusPage() {
 
         {/* Active Incidents */}
         {incidents.length > 0 && (
-          <div className="border border-yellow-400/30 bg-yellow-400/5 p-6 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-yellow-400">
+          <section
+            className="border border-yellow-400/30 bg-yellow-400/5 p-6 space-y-4"
+            aria-labelledby="active-incidents-heading"
+          >
+            <h2
+              id="active-incidents-heading"
+              className="text-sm font-semibold uppercase tracking-wider text-yellow-400"
+            >
               Active Incidents
             </h2>
             {incidents.map((incident) => (
@@ -135,7 +146,7 @@ export default function StatusPage() {
                 ))}
               </div>
             ))}
-          </div>
+          </section>
         )}
 
         {/* Components */}
@@ -145,28 +156,47 @@ export default function StatusPage() {
         <CorridorList corridors={corridors} />
 
         {/* Subscribe */}
-        <div className="border border-[#333] bg-[#111] p-6 space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider">Get Updates</h2>
-          <p className="text-xs text-[#777]">
+        <section
+          className="border border-[#333] bg-[#111] p-6 space-y-3"
+          aria-labelledby="subscribe-heading"
+        >
+          <h2 id="subscribe-heading" className="text-sm font-semibold uppercase tracking-wider">
+            Get Updates
+          </h2>
+          <p id="subscribe-description" className="text-xs text-[#777]">
             Subscribe to receive notifications about system status and incidents
           </p>
-          <div className="flex gap-2">
+          <form
+            className="flex gap-2"
+            aria-describedby="subscribe-description"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <label htmlFor="status-subscribe-email" className="sr-only">
+              Email address
+            </label>
             <input
+              id="status-subscribe-email"
+              name="email"
               type="email"
+              autoComplete="email"
               placeholder="your@email.com"
-              className="flex-1 bg-[#0a0a0a] border border-[#333] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c9a962]"
+              aria-label="Email address"
+              className="flex-1 bg-[#0a0a0a] border border-[#333] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c9a962] focus-visible:ring-2 focus-visible:ring-[#c9a962]"
             />
-            <button className="text-[10px] tracking-widest uppercase px-4 py-2 border border-[#c9a962] text-[#c9a962] hover:bg-[#c9a962] hover:text-[#0a0a0a]">
+            <button
+              type="submit"
+              className="text-[10px] tracking-widest uppercase px-4 py-2 border border-[#c9a962] text-[#c9a962] hover:bg-[#c9a962] hover:text-[#0a0a0a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
+            >
               Subscribe
             </button>
-          </div>
-        </div>
+          </form>
+        </section>
 
         {/* Footer */}
-        <div className="text-center text-xs text-[#555] space-y-1">
+        <footer className="text-center text-xs text-[#555] space-y-1">
           <p>Updated every 30 seconds</p>
           <p>Status powered by Stellar Spend Health Monitoring</p>
-        </div>
+        </footer>
       </div>
     </main>
   );

@@ -105,7 +105,12 @@ export function FormCard(props: FormCardProps) {
   };
 
   return (
-    <section className="flex flex-col gap-6" onKeyDown={handleKeyDown}>
+    <section
+      className="flex flex-col gap-6"
+      onKeyDown={handleKeyDown}
+      aria-label="Off-ramp form"
+      aria-busy={isSubmitting}
+    >
       <div className="bg-[#111111] border border-[#333333] p-6 flex flex-col gap-6">
         <InputField
           label="Amount (USDC)"
@@ -120,6 +125,7 @@ export function FormCard(props: FormCardProps) {
           success={validateAmount(amount) && parseFloat(amount) >= 0.7 ? 'Valid amount' : undefined}
           touched={touchedFields['amount']}
           disabled={!isConnected || isSubmitting}
+          aria-describedby="amount-error"
         />
 
         <FeeMethodSelector
@@ -174,10 +180,16 @@ export function FormCard(props: FormCardProps) {
           iban={iban}
           onIbanChange={setIban}
           disabled={!institution || !isConnected || isSubmitting}
+          aria-describedby={verifyError ? 'verify-error' : undefined}
         />
 
         {verifyError && (
-          <span role="alert" data-testid="error-message" className="text-[10px] text-red-400 tracking-wide">
+          <span
+            id="verify-error"
+            role="alert"
+            data-testid="error-message"
+            className="text-[10px] text-red-400 tracking-wide"
+          >
             {verifyError}
           </span>
         )}
@@ -204,9 +216,11 @@ export function FormCard(props: FormCardProps) {
         />
 
         <button
+          type="button"
           onClick={ctaState === 'disconnected' ? onConnect : () => void submitOfframp()}
           disabled={ctaDisabled}
           aria-label={getCtaLabel(ctaState)}
+          aria-busy={ctaState === 'connecting' || ctaState === 'submitting'}
           data-testid="offramp-cta-button"
           className={cn(
             'w-full py-4 min-h-[52px] text-xs font-bold tracking-[0.2em] transition-all duration-200',

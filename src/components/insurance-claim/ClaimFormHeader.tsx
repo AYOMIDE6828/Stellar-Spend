@@ -28,11 +28,12 @@ export function ClaimFormHeader({ coverage, onCancel }: ClaimFormHeaderProps) {
         </p>
       </div>
       <button
+        type="button"
         onClick={onCancel}
         aria-label="Close claim form"
         className="text-[#777777] hover:text-white transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]"
       >
-        ✕
+        <span aria-hidden="true">✕</span>
       </button>
     </div>
   );
