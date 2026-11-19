@@ -12,6 +12,27 @@ export interface NotificationItemProps {
   onRemove: (eventId: string) => void;
 }
 
+/**
+ * Resolves the click/remove handlers for a notification item.
+ *
+ * When explicit handlers are provided (backwards-compatible props) they take
+ * precedence; otherwise the handlers supplied by the notification context are
+ * used. This keeps the component usable both standalone and inside the
+ * refactored NotificationCenter provider.
+ */
+export function resolveNotificationHandlers(
+  props: Pick<NotificationItemProps, 'onClick' | 'onRemove'>,
+  context?: {
+    markAsRead?: (event: NotificationCenterEvent) => void;
+    remove?: (eventId: string) => void;
+  },
+): { onClick: (event: NotificationCenterEvent) => void; onRemove: (eventId: string) => void } {
+  return {
+    onClick: props.onClick ?? context?.markAsRead ?? (() => {}),
+    onRemove: props.onRemove ?? context?.remove ?? (() => {}),
+  };
+}
+
 export function getEventIcon(type: string) {
   switch (type) {
     case 'price_alert':
@@ -75,7 +96,7 @@ function NotificationItemComponent({ event, onClick, onRemove }: NotificationIte
       )}
     >
       <button
-        onClick={() => onClick(event)}
+        onClick={() => handlers.onClick(event)}
         className={cn(
           'w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962] rounded px-1',
           'transition-all',
@@ -108,7 +129,7 @@ function NotificationItemComponent({ event, onClick, onRemove }: NotificationIte
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onRemove(event.id);
+          handlers.onRemove(event.id);
         }}
         className="absolute right-2 top-2 text-[#555555] hover:text-[#777777] focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962] rounded"
         aria-label="Remove notification"

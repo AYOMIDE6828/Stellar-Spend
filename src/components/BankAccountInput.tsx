@@ -6,7 +6,7 @@ import {
   validateBankField,
   type BankFieldType,
   type ValidationResult,
-} from '@/lib/bank-validation';
+} from '@/lib/validation';
 
 interface BankFieldProps {
   type: BankFieldType;
