@@ -12,7 +12,6 @@ export function ToastContainer() {
     <div
       className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
       role="region"
-      aria-live="polite"
       aria-label="Notifications"
     >
       {toasts.map((toast) => (
@@ -31,13 +30,16 @@ export function ToastContainer() {
                     : 'bg-panel/80 border-line text-text'
             }
           `}
-          role="alert"
+          role={toast.type === 'error' || toast.type === 'warning' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' || toast.type === 'warning' ? 'assertive' : 'polite'}
+          aria-atomic="true"
         >
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm flex-1">{toast.message}</p>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
-              className="text-current opacity-70 hover:opacity-100 transition-opacity"
+              className="text-current opacity-70 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
               aria-label="Close notification"
             >
               <Icon name="close" size={16} strokeWidth={2} />

@@ -87,6 +87,16 @@ export function InsuranceOption({
 
   const isDisabled = disabled || amount <= 0;
 
+  const handleTermsKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        setShowTerms(true);
+      }
+    },
+    [],
+  );
+
   return (
     <>
       <div
@@ -99,15 +109,18 @@ export function InsuranceOption({
         )}
         role="group"
         aria-labelledby="insurance-option-label"
+        aria-describedby="insurance-option-description"
       >
         {/* Header row */}
         <div className="px-4 py-3 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             {/* Toggle switch */}
             <button
+              type="button"
               role="switch"
               aria-checked={enabled}
               aria-labelledby="insurance-option-label"
+              aria-describedby="insurance-option-description"
               aria-disabled={isDisabled}
               onClick={handleToggle}
               disabled={isDisabled}
@@ -138,19 +151,24 @@ export function InsuranceOption({
               >
                 {t('insurance.title')}
               </p>
-              <p className="text-xs text-[#777777] mt-0.5">{t('insurance.description')}</p>
+              <p id="insurance-option-description" className="text-xs text-[#777777] mt-0.5">
+                {t('insurance.description')}
+              </p>
             </div>
           </div>
 
           {/* Terms link */}
           <button
+            type="button"
             onClick={() => setShowTerms(true)}
+            onKeyDown={handleTermsKeyDown}
             className={cn(
               'flex-shrink-0 text-[10px] tracking-widest uppercase text-[#777777]',
               'hover:text-[#c9a962] transition-colors duration-150',
               'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
             )}
             aria-label="View insurance terms and conditions"
+            aria-haspopup="dialog"
           >
             {t('insurance.terms')}
           </button>

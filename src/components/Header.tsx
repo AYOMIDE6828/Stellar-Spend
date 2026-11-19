@@ -74,9 +74,13 @@ const WalletButton = memo(function WalletButton({
         <CopyButton text={walletAddress} label="" className="text-xs" keyboardShortcut="w" />
       )}
       <button
+        type="button"
         onClick={isConnected ? onDisconnect : onOpenModal}
         disabled={disabled}
         aria-label={isConnected ? 'Disconnect wallet' : 'Connect wallet'}
+        aria-busy={isConnecting}
+        aria-haspopup={isConnected ? undefined : 'dialog'}
+        aria-expanded={isConnected ? undefined : undefined}
         data-testid={isConnected ? 'wallet-button' : 'connect-wallet-button'}
         className={cn(
           'px-4 py-2 min-h-[44px] text-xs tracking-widest border transition-colors duration-150',
@@ -110,6 +114,7 @@ export const Header = memo(function Header({
   const { rate, flash } = useFxRate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<WalletType | null>(null);
+  const [isHelpActive, setIsHelpActive] = useState(false);
 
   // Load notifications from the unified NotificationProvider (#1042)
   const notificationCenter = useNotificationEvents();
@@ -117,6 +122,11 @@ export const Header = memo(function Header({
   const handleOpenModal = useCallback(() => {
     setIsModalOpen(true);
   }, []);
+
+  const handleHelpOpen = () => {
+    setIsHelpActive(true);
+    onHelpOpen?.();
+  };
 
   // Expose openModal to parent via callback ref
   useEffect(() => {
@@ -194,8 +204,10 @@ export const Header = memo(function Header({
           <div className="flex items-center gap-2">
             <LanguageSelector />
             <button
-              onClick={onHelpOpen}
+              type="button"
+              onClick={handleHelpOpen}
               aria-label="Open help"
+              aria-current={isHelpActive ? 'page' : undefined}
               className={cn(
                 'p-2 text-[#777777] hover:text-[#c9a962] transition-colors',
                 'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
@@ -209,6 +221,8 @@ export const Header = memo(function Header({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
+                aria-hidden="true"
+                focusable="false"
               >
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M12 16v-4"></path>

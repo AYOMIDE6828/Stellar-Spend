@@ -38,9 +38,11 @@ export function InsuranceClaimForm({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="claim-form-title"
+      aria-describedby="claim-form-description"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div
@@ -50,6 +52,10 @@ export function InsuranceClaimForm({
       />
 
       <div className="relative z-10 w-full max-w-md border border-[#333333] bg-[#0a0a0a] p-6 flex flex-col gap-5 shadow-2xl">
+        <p id="claim-form-description" className="sr-only">
+          File an insurance claim for this transaction. Use Tab to move between
+          fields and Escape to cancel.
+        </p>
         <ClaimFormHeader coverage={coverage} onCancel={onCancel} />
 
         {isCheckingEligibility || !isEligible ? (

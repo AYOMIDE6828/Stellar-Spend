@@ -223,6 +223,9 @@ function useNotificationCenter(userAddress: string | null) {
     aggregateTransactionUpdates,
     aggregatePayoutUpdates,
     unreadBadgeText,
+    // Backwards-compatible aliases
+    badgeText: unreadBadgeText,
+    unread: state.unreadCount,
   };
 }
 

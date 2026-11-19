@@ -105,6 +105,25 @@ export default defineConfig({
           branches: 75,
           statements: 80,
         },
+        // Contexts, hooks and components touched by the a11y/context refactors
+        'src/contexts/**': {
+          lines: 85,
+          functions: 85,
+          branches: 85,
+          statements: 85,
+        },
+        'src/hooks/**': {
+          lines: 85,
+          functions: 85,
+          branches: 85,
+          statements: 85,
+        },
+        'src/components/**': {
+          lines: 85,
+          functions: 85,
+          branches: 85,
+          statements: 85,
+        },
       },
       exclude: [
         '**/node_modules/**',
@@ -133,6 +152,8 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
+        // Registers jest-axe matchers (toHaveNoViolations) for accessibility assertions
+        setupFilesAfterEach: ['./src/test/setup.ts'],
         exclude: ['**/node_modules/**', '**/e2e/**']
       }
     }, {

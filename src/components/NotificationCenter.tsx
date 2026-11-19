@@ -36,6 +36,24 @@ function NotificationCenterComponent({
     setFocusedIndex,
   } = useNotificationEvents({ events });
 
+  // Move focus into the panel when it opens, and restore focus to the bell
+  // button when it closes (e.g. via Escape or outside click).
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      // Focus the first focusable element inside the panel on open
+      const panel = panelRef.current;
+      const firstFocusable = panel?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    } else if (!isOpen && wasOpenRef.current) {
+      buttonRef.current?.focus();
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
+=======
+
   // Focus the correct notification button when focusedIndex changes
   useEffect(() => {
     if (!isOpen || focusedIndex < 0) return;
@@ -74,6 +92,7 @@ function NotificationCenterComponent({
         buttonRef.current?.focus();
         return;
       }
+=======
 
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -147,12 +166,14 @@ function NotificationCenterComponent({
        * without interrupting the current reading flow.
        */}
       <div
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
       >
         {announcement}
       </div>
+=======
 
       {/* Bell Button */}
       <button
@@ -161,6 +182,8 @@ function NotificationCenterComponent({
         aria-label={bellAriaLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
+        aria-controls="notification-center-panel"
+=======
         className={cn(
           'relative p-2 text-[#777777] hover:text-[#c9a962] transition-colors',
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]',
@@ -184,12 +207,14 @@ function NotificationCenterComponent({
             {unreadBadgeText}
           </span>
         )}
+=======
       </button>
 
       {/* Dropdown Panel */}
       {isOpen && (
         <NotificationPanel
           ref={panelRef}
+          id="notification-center-panel"
           events={events}
           loading={loading}
           onNotificationClick={handleNotificationClick}
@@ -198,6 +223,7 @@ function NotificationCenterComponent({
           onClearAll={onClearAll}
         />
       )}
+=======
     </div>
   );
 }

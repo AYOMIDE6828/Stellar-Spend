@@ -48,6 +48,10 @@ export interface UseFormReturn<T extends Record<string, unknown>> {
   validateField: (field: keyof T) => string | undefined;
   handleSubmit: (e?: FormEvent) => Promise<boolean>;
   resetForm: (newValues?: Partial<T>) => void;
+  /** Alias for `resetForm` (backwards-compatible). */
+  reset: (newValues?: Partial<T>) => void;
+  /** Alias for `handleSubmit` (backwards-compatible). */
+  submit: (e?: FormEvent) => Promise<boolean>;
   getFieldProps: (field: keyof T) => {
     name: string;
     value: unknown;
@@ -340,6 +344,7 @@ export function useForm<T extends Record<string, unknown>>({
   void control;
 
   return {
+    // State
     values,
     errors,
     touched,
@@ -347,12 +352,14 @@ export function useForm<T extends Record<string, unknown>>({
     isValid,
     isDirty,
     submitError,
+    // Setters
     setValues,
     setFieldValue,
     setFieldError,
     setErrors,
     setFieldTouched,
     setSubmitError,
+    // Handlers
     handleChange,
     handleBlur,
     validate: validate as unknown as () => boolean,
@@ -360,5 +367,8 @@ export function useForm<T extends Record<string, unknown>>({
     handleSubmit,
     resetForm,
     getFieldProps,
+    // Backwards-compatible aliases
+    reset: resetForm,
+    submit: handleSubmit,
   };
 }

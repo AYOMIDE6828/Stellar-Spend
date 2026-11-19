@@ -94,6 +94,8 @@ function NotificationItemComponent({ event, onClick, onRemove }: NotificationIte
         'relative px-4 py-3 border-l-4 transition-colors hover:bg-[#1a1a1a]',
         event.read ? 'border-[#222222] bg-[#0a0a0a]' : 'border-[#c9a962] bg-[#1a1a1a]',
       )}
+      role="listitem"
+      aria-label={event.read ? `${event.title} (read)` : `${event.title} (unread)`}
     >
       <button
         onClick={() => handlers.onClick(event)}
@@ -109,7 +111,11 @@ function NotificationItemComponent({ event, onClick, onRemove }: NotificationIte
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-semibold text-white truncate">{event.title}</h4>
               {!event.read && (
-                <span className="shrink-0 w-2 h-2 rounded-full bg-[#c9a962]" aria-hidden="true" />
+                <span
+                  className="shrink-0 w-2 h-2 rounded-full bg-[#c9a962]"
+                  aria-hidden="true"
+                  data-testid="unread-indicator"
+                />
               )}
             </div>
             <p className="text-[11px] text-[#777777] mt-0.5 line-clamp-2">{event.description}</p>
@@ -127,12 +133,13 @@ function NotificationItemComponent({ event, onClick, onRemove }: NotificationIte
       </button>
 
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           handlers.onRemove(event.id);
         }}
         className="absolute right-2 top-2 text-[#555555] hover:text-[#777777] focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962] rounded"
-        aria-label="Remove notification"
+        aria-label={`Remove notification: ${event.title}`}
         title="Remove"
       >
         <Icon name="close" size={12} />

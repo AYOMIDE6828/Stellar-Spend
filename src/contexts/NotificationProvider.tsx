@@ -72,7 +72,31 @@ export interface NotificationEvent {
 // Unified context value
 // ---------------------------------------------------------------------------
 
-interface NotificationContextValue {
+/**
+ * Shape of the value exposed by {@link NotificationContext}.
+ *
+ * The context intentionally merges two previously separate surfaces:
+ *
+ * - **Toast API** (`toasts`, `showToast`, `removeToast`) — transient banners
+ *   that auto-dismiss after {@link TOAST_TTL_MS}. No persistence.
+ * - **Notification-center API** (`events`, `unreadCount`, `unreadBadgeText`,
+ *   `notificationLoading`, `addEvent`, `markAsRead`, `markAllAsRead`,
+ *   `removeEvent`, `clearAll`, `addTierChangeEvent`) — a persistent event log
+ *   backed by `localStorage` under {@link STORAGE_KEY} and capped at
+ *   {@link MAX_EVENTS} entries.
+ *
+ * Consumers should prefer the narrow hooks ({@link useToast},
+ * {@link useNotificationEvents}) unless they genuinely need both surfaces.
+ *
+ * @example
+ * ```tsx
+ * function CopyButton() {
+ *   const { showToast } = useToast();
+ *   return <button onClick={() => showToast('Copied!', 'success')}>Copy</button>;
+ * }
+ * ```
+ */
+export interface NotificationContextValue {
   // ----- Toast API -----
   toasts: Toast[];
   /** Show a transient toast banner. */
@@ -198,6 +222,19 @@ const NotificationContext = createContext<NotificationContextValue | undefined>(
 // Provider
 // ---------------------------------------------------------------------------
 
+/**
+ * Single provider for all notification surfaces.
+ *
+ * Mount this once near the app root (it is wired up by `AppProviders`).
+ * Do not nest additional `NotificationProvider` instances — the toast queue
+ * and persisted event log are global, and a nested provider would create a
+ * second, divergent copy of that state.
+ *
+ * @param props.children    React subtree that may consume the context.
+ * @param props.userAddress Wallet address used to scope persisted events and
+ *                          to enable price-alert polling. When `null`, the
+ *                          notification center stays empty and idle.
+ */
 export function NotificationProvider({
   children,
   /** Wallet address — required to load persisted events for this user. */
@@ -427,10 +464,10 @@ export function useNotificationEvents() {
 }
 
 // ---------------------------------------------------------------------------
-// Backward-compat re-exports (keep existing imports from ToastContext working)
-// These can be removed once all call sites use useNotification/useToast
-// from this file.
+// Backward-compat notes
+//
+// The legacy `ToastProvider` / `useToast` aliases are preserved by keeping the
+// `NotificationProvider` and `useToast` export names stable. The former
+// standalone `ToastContext` provider has been removed; all call sites should
+// import from this module. No additional re-exports are needed.
 // ---------------------------------------------------------------------------
-
-/** @deprecated Import useToast from NotificationProvider instead */
-// useToastCompat alias removed — use useToast directly
