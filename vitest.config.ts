@@ -93,6 +93,10 @@ export default defineConfig({
         '**/tests/**',
         '**/src/test/__snapshots__/**',
         '**/src/test/snapshots/**',
+        // Documentation/spec acceptance tests validate static files only; they
+        // contain no executable application logic and are excluded from coverage.
+        '**/src/test/openapi-spec.test.ts',
+        '**/src/test/docs-acceptance.test.ts',
       ],
     },
     projects: [{
