@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import {
   type ComponentStatus,
@@ -82,11 +82,24 @@ export default function StatusPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const overallStatus = components.every((c) => c.status === 'operational')
-    ? 'operational'
-    : components.some((c) => c.status === 'down')
-      ? 'down'
-      : 'degraded';
+  const overallStatus = useMemo(
+    () =>
+      components.every((c) => c.status === 'operational')
+        ? 'operational'
+        : components.some((c) => c.status === 'down')
+          ? 'down'
+          : 'degraded',
+    [components],
+  );
+
+  const formattedIncidents = useMemo(
+    () =>
+      incidents.map((incident) => ({
+        ...incident,
+        formattedCreatedAt: formatDateTime(incident.createdAt),
+      })),
+    [incidents],
+  );
 
   return (
     <main id="main-content" className="min-h-screen bg-[#0a0a0a] text-white">
@@ -117,13 +130,11 @@ export default function StatusPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-yellow-400">
               Active Incidents
             </h2>
-            {incidents.map((incident) => (
+            {formattedIncidents.map((incident) => (
               <div key={incident.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-medium">{incident.title}</div>
-                  <div className="text-xs text-[#777]">
-                    {formatDateTime(incident.createdAt)}
-                  </div>
+                  <div className="text-xs text-[#777]">{incident.formattedCreatedAt}</div>
                 </div>
                 {incident.updates.map((update, idx) => (
                   <div

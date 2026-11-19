@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 ('use client');
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { Transaction } from '@/lib/transaction-storage';
 import { exportCSV, exportPDF, exportJSON, exportXLSX, filterByDateRange } from '@/lib/export';
@@ -11,12 +11,15 @@ interface Props {
   walletAddress?: string;
 }
 
-export default function ExportControls({ transactions, walletAddress }: Props) {
+function ExportControls({ transactions, walletAddress }: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [exporting, setExporting] = useState<string | null>(null);
 
-  const filtered = filterByDateRange(transactions, dateFrom, dateTo);
+  const filtered = useMemo(
+    () => filterByDateRange(transactions, dateFrom, dateTo),
+    [transactions, dateFrom, dateTo],
+  );
   const disabled = filtered.length === 0;
 
   const slug = walletAddress ? `${walletAddress.slice(0, 6)}_${walletAddress.slice(-4)}` : 'wallet';
@@ -142,3 +145,5 @@ export default function ExportControls({ transactions, walletAddress }: Props) {
     </div>
   );
 }
+
+export default memo(ExportControls);

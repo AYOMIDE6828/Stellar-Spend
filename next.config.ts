@@ -18,6 +18,9 @@ const bundleOptimization = {
     '@allbridge/bridge-core-sdk',
     'viem',
     '@sentry/nextjs',
+    'lucide-react',
+    'date-fns',
+    'recharts',
   ],
 } as const;
 
