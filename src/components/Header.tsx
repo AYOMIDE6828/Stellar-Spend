@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { bpClasses } from '@/lib/breakpoints';
+import { Skeleton } from '@/components/ui';
 import { ThemeToggle } from './ThemeToggle';
 import { CopyButton } from './CopyButton';
 import { WalletModal } from './WalletModal';
@@ -35,7 +36,7 @@ function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
-function WalletButton({
+const WalletButton = memo(function WalletButton({
   isConnected,
   isConnecting,
   walletAddress,
@@ -50,11 +51,15 @@ function WalletButton({
   onOpenModal: () => void;
   onDisconnect: () => void;
 }) {
-  const label = isConnecting
-    ? 'CONNECTING...'
-    : isConnected && walletAddress
-      ? truncateAddress(walletAddress)
-      : 'CONNECT WALLET';
+  const label = useMemo(
+    () =>
+      isConnecting
+        ? 'CONNECTING...'
+        : isConnected && walletAddress
+          ? truncateAddress(walletAddress)
+          : 'CONNECT WALLET',
+    [isConnecting, isConnected, walletAddress],
+  );
 
   const disabled = isConnecting;
 
@@ -89,9 +94,9 @@ function WalletButton({
       </button>
     </div>
   );
-}
+});
 
-export function Header({
+export const Header = memo(function Header({
   subtitle,
   isConnected,
   isConnecting,
@@ -114,9 +119,9 @@ export function Header({
   // Load notifications from the unified NotificationProvider (#1042)
   const notificationCenter = useNotificationEvents();
 
-  const handleOpenModal = () => {
+  const handleOpenModal = useCallback(() => {
     setIsModalOpen(true);
-  };
+  }, []);
 
   const handleHelpOpen = () => {
     setIsHelpActive(true);
@@ -126,29 +131,47 @@ export function Header({
   // Expose openModal to parent via callback ref
   useEffect(() => {
     onModalRef?.(handleOpenModal);
-  }, [onModalRef]);
+  }, [onModalRef, handleOpenModal]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     if (!isConnecting) setIsModalOpen(false);
-  };
+  }, [isConnecting]);
 
-  const handleConnectWallet = async (walletType: WalletType) => {
-    setConnectingWallet(walletType);
-    await onConnect(walletType);
-    setConnectingWallet(null);
-    // Close modal on success (no error)
-    if (!walletError) setIsModalOpen(false);
-  };
+  const handleConnectWallet = useCallback(
+    async (walletType: WalletType) => {
+      setConnectingWallet(walletType);
+      await onConnect(walletType);
+      setConnectingWallet(null);
+      // Close modal on success (no error)
+      if (!walletError) setIsModalOpen(false);
+    },
+    [onConnect, walletError],
+  );
 
   // Close modal when connection succeeds
-  if (isConnected && isModalOpen) {
-    setIsModalOpen(false);
-  }
+  useEffect(() => {
+    if (isConnected && isModalOpen) {
+      setIsModalOpen(false);
+    }
+  }, [isConnected, isModalOpen]);
+
+  const usdcBalanceText = useMemo(
+    () => `${stellarUsdcBalance ?? '—'} USDC`,
+    [stellarUsdcBalance],
+  );
+  const xlmBalanceText = useMemo(
+    () => `${stellarXlmBalance ?? '—'} XLM`,
+    [stellarXlmBalance],
+  );
 
   return (
     <>
       <header
-        className={`w-full px-6 py-5 flex items-start justify-between gap-6 ${bpClasses.headerCollapseFlexCol} ${bpClasses.headerCollapseItemsStart}`}
+        className={cn(
+          'w-full px-6 py-5 flex items-start justify-between gap-6',
+          bpClasses.headerCollapseFlexCol,
+          bpClasses.headerCollapseItemsStart,
+        )}
         role="banner"
       >
         {/* Left: title + subtitle + FX chip */}
@@ -172,8 +195,13 @@ export function Header({
         </div>
 
         {/* Right: notifications + wallet button + balances */}
-        <div className={`flex flex-col items-end gap-2 ${bpClasses.headerCollapseItemsStart}`}>
-          <div className="flex items-center gap-2" role="toolbar" aria-label="Header actions">
+        <div
+          className={cn(
+            'flex flex-col items-end gap-2',
+            bpClasses.headerCollapseItemsStart,
+          )}
+        >
+          <div className="flex items-center gap-2">
             <LanguageSelector />
             <button
               type="button"
@@ -226,22 +254,21 @@ export function Header({
 
           {isConnected && (
             <div
-              className={`flex flex-col items-end gap-0.5 ${bpClasses.headerCollapseItemsStart}`}
-              role="group"
-              aria-label="Wallet balances"
-              aria-live="polite"
-              aria-busy={isBalanceLoading}
+              className={cn(
+                'flex flex-col items-end gap-0.5',
+                bpClasses.headerCollapseItemsStart,
+              )}
+              data-testid="header-balances"
             >
               {isBalanceLoading ? (
-                <span className="text-xs text-[#777777] tracking-widest">loading...</span>
+                <div className="flex flex-col items-end gap-0.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
               ) : (
                 <>
-                  <span className="text-xs text-[#c9a962] tracking-wider">
-                    {stellarUsdcBalance ?? '—'} USDC
-                  </span>
-                  <span className="text-xs text-[#777777] tracking-wider">
-                    {stellarXlmBalance ?? '—'} XLM
-                  </span>
+                  <span className="text-xs text-[#c9a962] tracking-wider">{usdcBalanceText}</span>
+                  <span className="text-xs text-[#777777] tracking-wider">{xlmBalanceText}</span>
                 </>
               )}
             </div>
@@ -260,4 +287,4 @@ export function Header({
       />
     </>
   );
-}
+});

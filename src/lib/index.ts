@@ -15,6 +15,9 @@ export * from './services';
 // Clients
 export * from './clients';
 
+// API client (centralized typed fetch wrapper)
+export * from './api/client';
+
 // Utilities
 export { logger } from './logger';
 export { cn } from './cn';
@@ -22,6 +25,9 @@ export * from './error-types';
 export * from './error-handler';
 export * from './env';
 export * from './cors';
+
+// Request validation wrappers
+export * from './validation/validate-request';
 
 // Repositories
 export * from './repositories';

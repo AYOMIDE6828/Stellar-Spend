@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { Icon } from '@/components/Icon';
 import { AsyncBoundary, ListEmptyState, ListLoadingState } from '@/components/AsyncBoundary';
 import type { NotificationCenterEvent } from '@/hooks/useNotificationCenter';
+import { useNotificationCenterContext } from './NotificationCenterContext';
 import { NotificationItem } from './NotificationItem';
 
 const FOCUSABLE_SELECTOR = [
@@ -17,89 +18,31 @@ const FOCUSABLE_SELECTOR = [
 ].join(',');
 
 export interface NotificationPanelProps {
-  events: NotificationCenterEvent[];
-  loading: boolean;
-  onNotificationClick: (event: NotificationCenterEvent) => void;
-  onMarkAllAsRead: () => void;
-  onRemoveEvent: (eventId: string) => void;
-  onClearAll: () => void;
-  /** Called when the user presses Escape or requests the panel to close. */
-  onClose?: () => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  events?: NotificationCenterEvent[];
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  loading?: boolean;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onNotificationClick?: (event: NotificationCenterEvent) => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onMarkAllAsRead?: () => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onRemoveEvent?: (eventId: string) => void;
+  /** @deprecated Prefer the shared NotificationCenterContext; kept for backwards compatibility. */
+  onClearAll?: () => void;
 }
 
 export const NotificationPanel = forwardRef<HTMLDivElement, NotificationPanelProps>(
-  function NotificationPanel(
-    {
-      events,
-      loading,
-      onNotificationClick,
-      onMarkAllAsRead,
-      onRemoveEvent,
-      onClearAll,
-      onClose,
-    },
-    ref,
-  ) {
-    const titleId = useId();
-    const panelRef = useRef<HTMLDivElement | null>(null);
+  function NotificationPanel(props, ref) {
+    const context = useNotificationCenterContext();
 
-    const setRefs = (node: HTMLDivElement | null) => {
-      panelRef.current = node;
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
-      }
-    };
-
-    // Focus management: move focus into the panel on mount and restore it on unmount.
-    useEffect(() => {
-      const previouslyFocused = document.activeElement as HTMLElement | null;
-      const panel = panelRef.current;
-      if (panel) {
-        const firstFocusable = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-        (firstFocusable ?? panel).focus();
-      }
-      return () => {
-        if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-          previouslyFocused.focus();
-        }
-      };
-    }, []);
-
-    // Keyboard handling: Escape closes, Tab is trapped within the panel.
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        onClose?.();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
-      const focusable = Array.from(
-        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        panel.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey) {
-        if (active === first || active === panel) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
+    // Props take precedence when explicitly provided so existing callers keep working.
+    const events = props.events ?? context.events;
+    const loading = props.loading ?? context.loading;
+    const onNotificationClick = props.onNotificationClick ?? context.onNotificationClick;
+    const onMarkAllAsRead = props.onMarkAllAsRead ?? context.onMarkAllAsRead;
+    const onRemoveEvent = props.onRemoveEvent ?? context.onRemoveEvent;
+    const onClearAll = props.onClearAll ?? context.onClearAll;
 
     return (
       <div

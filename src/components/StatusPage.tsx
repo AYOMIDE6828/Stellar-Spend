@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useStatusPolling } from '@/hooks/useStatusPolling';
 import {
   type ComponentStatus,
   type CorridorStatus,
@@ -74,19 +75,30 @@ export default function StatusPage() {
     month: 99.87,
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useStatusPolling({
+    onPoll: () => {
       setComponents((prev) => prev.map((c) => ({ ...c, lastCheck: Date.now() })));
-    }, 30000);
+    },
+  });
 
-    return () => clearInterval(interval);
-  }, []);
+  const overallStatus = useMemo(
+    () =>
+      components.every((c) => c.status === 'operational')
+        ? 'operational'
+        : components.some((c) => c.status === 'down')
+          ? 'down'
+          : 'degraded',
+    [components],
+  );
 
-  const overallStatus = components.every((c) => c.status === 'operational')
-    ? 'operational'
-    : components.some((c) => c.status === 'down')
-      ? 'down'
-      : 'degraded';
+  const formattedIncidents = useMemo(
+    () =>
+      incidents.map((incident) => ({
+        ...incident,
+        formattedCreatedAt: formatDateTime(incident.createdAt),
+      })),
+    [incidents],
+  );
 
   return (
     <main id="main-content" className="min-h-screen bg-[#0a0a0a] text-white">
@@ -128,13 +140,11 @@ export default function StatusPage() {
             >
               Active Incidents
             </h2>
-            {incidents.map((incident) => (
+            {formattedIncidents.map((incident) => (
               <div key={incident.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-medium">{incident.title}</div>
-                  <div className="text-xs text-[#777]">
-                    {formatDateTime(incident.createdAt)}
-                  </div>
+                  <div className="text-xs text-[#777]">{incident.formattedCreatedAt}</div>
                 </div>
                 {incident.updates.map((update, idx) => (
                   <div

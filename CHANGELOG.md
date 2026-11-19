@@ -86,3 +86,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `001_create_transactions.sql`/`002_add_transaction_analytics_fields.sql` (the
   `TEXT`-id, Stellar-native schema every route and repository actually uses). No
   duplicate migration-number prefixes remain in `migrations/`. (#784)
+- **Unused and deprecated API endpoints under `src/app/api/`** — audited the
+  route tree against access logs and test coverage and deleted the following
+  dead routes (no client call sites, no tests, superseded by the listed
+  replacements):
+  - `GET /api/transactions/legacy` → use `GET /api/transactions`
+  - `POST /api/transactions/legacy/sync` → use `POST /api/transactions/sync`
+  - `GET /api/wallet/balance-old` → use `GET /api/wallet/balance`
+  - `POST /api/auth/login-v1` → use `POST /api/auth/login`
+  - `GET /api/rates/deprecated` → use `GET /api/rates`
+  - `GET /api/health/ping` → use `GET /api/health`
+  - `POST /api/webhooks/stellar/old` → use `POST /api/webhooks/stellar`
+
+  All remaining routes under `src/app/api/` are unchanged, so this removal is
+  backwards compatible for every supported client. Regression tests assert each
+  removed path now returns `404` (see `src/app/api/__tests__/removed-endpoints.test.ts`).
+  (#1456)

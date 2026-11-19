@@ -53,6 +53,33 @@ export default defineConfig({
         functions: 85,
         branches: 80,
         statements: 85,
+        // Shared validation helpers extracted from form components
+        'src/lib/validation/**': {
+          lines: 85,
+          functions: 85,
+          branches: 80,
+          statements: 85,
+        },
+        // Notification state reducer/context
+        'src/components/NotificationCenter*': {
+          lines: 85,
+          functions: 85,
+          branches: 80,
+          statements: 85,
+        },
+        'src/lib/notifications/**': {
+          lines: 85,
+          functions: 85,
+          branches: 80,
+          statements: 85,
+        },
+        // Unified error boundary
+        'src/components/ErrorBoundary*': {
+          lines: 85,
+          functions: 85,
+          branches: 80,
+          statements: 85,
+        },
         // Higher thresholds for security-critical modules
         'src/lib/offramp/**': {
           lines: 85,
@@ -112,6 +139,10 @@ export default defineConfig({
         '**/tests/**',
         '**/src/test/__snapshots__/**',
         '**/src/test/snapshots/**',
+        // Documentation/spec acceptance tests validate static files only; they
+        // contain no executable application logic and are excluded from coverage.
+        '**/src/test/openapi-spec.test.ts',
+        '**/src/test/docs-acceptance.test.ts',
       ],
     },
     projects: [{
