@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
 
   const { merchantId, idempotencyKey, items } = parsed.data;
 
+  // A header that disagrees with the body would make a retry look like a new payout (#1462).
+  const headerKey = request.headers.get('idempotency-key');
+  if (headerKey && headerKey !== idempotencyKey) {
+    return ErrorHandler.validation('Idempotency-Key header must match idempotencyKey in the body');
+  }
+
   try {
     const payout = await merchantService.createBulkPayout(
       merchantId,
