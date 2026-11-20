@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdk from '@/lib/stellar/sdk';
 import { randomBytes } from 'crypto';
 
 interface AuthEntry {
