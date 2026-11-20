@@ -36,6 +36,8 @@ class PublicApiRateLimitStore {
   constructor() {
     // Cleanup expired entries every minute
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
+    // Do not keep the process alive just for cleanup (#1467).
+    this.cleanupInterval.unref?.();
   }
 
   async increment(key: string, windowMs: number): Promise<number> {
