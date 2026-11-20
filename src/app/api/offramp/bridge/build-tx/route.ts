@@ -11,13 +11,9 @@ import { generateRequestId, createRequestLogger } from '@/lib/offramp';
 import { ErrorHandler } from '@/lib/error-handler';
 import { ApiError, ErrorType } from '@/lib/error-types';
 import { allbridgeBreaker, CircuitOpenError } from '@/lib/circuit-breaker';
+import { withRequestId } from '@/lib/http/request-id';
 
 export const maxDuration = 30;
-
-function withRequestId<T>(response: NextResponse<T>, requestId: string): NextResponse<T> {
-  response.headers.set('X-Request-Id', requestId);
-  return response;
-}
 
 /**
  * POST /api/offramp/bridge/build-tx
