@@ -70,6 +70,9 @@ const REDACT_KEYS = new Set([
   'accountname',
   'account_name',
   'beneficiary_account_name',
+  // PII — contact details (#1474)
+  'email',
+  'phone',
   // PII — user addresses and wallet identifiers (#802)
   'useraddress',
   'user_address',
