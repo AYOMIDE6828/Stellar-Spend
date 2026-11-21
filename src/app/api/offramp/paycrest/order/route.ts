@@ -12,11 +12,7 @@ export const maxDuration = 20;
 import { PayoutOrderRequest } from '@/lib/offramp';
 
 import { PaycrestAdapter, PaycrestHttpError } from '@/lib/offramp';
-
-function withRequestId<T>(response: NextResponse<T>, requestId: string): NextResponse<T> {
-  response.headers.set('X-Request-Id', requestId);
-  return response;
-}
+import { withRequestId } from '@/lib/http/request-id';
 
 /**
  * POST /api/offramp/paycrest/order
