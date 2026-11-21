@@ -73,6 +73,13 @@ IMPLEMENTATION_*.md
 # PR description scratch files (use CHANGELOG.md / the PR body instead)
 PR_DESCRIPTION*.md
 
+# Stale completion/deliverable reports — keep content in CHANGELOG.md instead
+DELIVERABLES*.txt
+ACCEPTANCE_VERIFICATION*.md
+ERROR_HANDLER_AUDIT*.md
+*_COMPLETION_REPORT.md
+*_AUDIT.md
+
 *storybook.log
 storybook-static
 

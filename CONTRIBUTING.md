@@ -429,6 +429,63 @@ SLAs are for the first substantive review. Trivial approvals (docs typo) may be 
 - Never import server-side variables in `'use client'` components
 - Add new variables to `.env.example` with a description comment
 
+### Constants and magic numbers
+
+- **Never inline a magic number or repeated string literal.** Define it as a named
+  constant instead.
+- Application-wide constants (timeouts, polling intervals, cache TTLs, Stellar
+  parameters) live in **`src/lib/constants.ts`**, which re-exports everything from
+  `src/lib/config/`. Import from there:
+  ```ts
+  import { BRIDGE_POLLING_INTERVAL_MS, CACHE_CURRENCY_TTL_MS } from '@/lib/constants';
+  ```
+- Fee percentages and basis-point values live in **`@stellar-spend/shared`**
+  (`packages/shared/src/fee-constants.ts`).
+- Per-route rate-limit configs live in **`src/lib/rateLimiter.ts`** (`RATE_LIMIT_REGISTRY`).
+- Currency, stablecoin, and corridor configs live in their respective files
+  (`currencies.ts`, `stablecoins.ts`, `corridor-config.ts`).
+- If you add a new global constant, add it to `src/lib/constants.ts` and add a
+  corresponding test in `src/lib/constants.test.ts`.
+
+### Error handling
+
+All error handling must follow these rules (enforced by ESLint — violations fail CI):
+
+- **No floating promises.** Every `async` call must be `await`ed or explicitly
+  discarded with `void`:
+  ```ts
+  // ❌ Floating — rejection is silently lost
+  fetchData();
+
+  // ✅ Awaited
+  await fetchData();
+
+  // ✅ Intentionally fire-and-forget
+  void fetchData();
+  ```
+  Rule: `@typescript-eslint/no-floating-promises: error`
+
+- **No empty catch blocks.** At minimum, log the error or rethrow it. If you
+  genuinely want to ignore an error, prefix the parameter with `_` and add a comment:
+  ```ts
+  // ❌ Swallowed — no trace of what went wrong
+  try { ... } catch (e) {}
+
+  // ✅ Logged
+  try { ... } catch (e) {
+    logger.warn('context', { error: e });
+  }
+
+  // ✅ Intentionally ignored (use sparingly)
+  try { ... } catch (_e) {
+    // Safe to ignore: optional cache warm-up — the main path continues without it
+  }
+  ```
+  Rule: `no-empty: ['error', { allowEmptyCatch: false }]`
+
+- **Use the shared `ErrorHandler`** for all API route errors. See
+  `docs/api/ERROR_RESPONSES.md` for the full reference.
+
 ### Formatting
 
 - **Prettier** is enforced; run `npm run format` to auto-fix

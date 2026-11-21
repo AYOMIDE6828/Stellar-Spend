@@ -149,6 +149,16 @@ export default [
       // (e2e/, scripts/ .ts files, root config files, etc.) so accidental
       // console leaks are still surfaced outside the strict application layer.
       'no-console': ['error', { allow: ['warn', 'error'] }],
+
+      // ── Error-handling lint rules (#1543) ──────────────────────────────────
+      // Floating promises (unawaited async calls) hide errors silently.
+      // Prefix with `void` to explicitly opt out: `void somePromise()`.
+      '@typescript-eslint/no-floating-promises': 'error',
+      // Empty catch blocks swallow errors with no trace.
+      // At minimum log the caught error or rethrow it.
+      // Prefix the catch parameter with _ to suppress when intentional:
+      //   catch (_e) { /* intentionally ignored */ }
+      'no-empty': ['error', { allowEmptyCatch: false }],
     },
   },
 
