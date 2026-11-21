@@ -3,6 +3,10 @@
  * Exports commonly used utilities and services
  */
 
+// Constants — single source of truth for app-wide magic numbers (#1542)
+export * from './constants';
+
+// Config
 // DI
 export * from './di';
 
