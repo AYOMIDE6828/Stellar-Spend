@@ -80,6 +80,21 @@ export function parsePaginationQuery(
 }
 
 /**
+ * Parse 1-based `page` and `limit` from a query string (#1468).
+ * Non-numeric values fall back to the defaults, so `NaN` never reaches a query.
+ */
+export function parsePageQuery(
+  searchParams: URLSearchParams,
+  options: { defaultLimit: number; maxLimit: number },
+): { page: number; limit: number } {
+  const parsedPage = parseInt(searchParams.get('page') ?? '', 10);
+  const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+  const parsedLimit = parseInt(searchParams.get('limit') ?? '', 10);
+  const requested = Number.isFinite(parsedLimit) ? parsedLimit : options.defaultLimit;
+  return { page, limit: Math.min(Math.max(requested, 1), options.maxLimit) };
+}
+
+/**
  * Trim a result fetched with a `limit + 1` lookahead back to `limit` items
  * and report whether more items exist beyond the page.
  */

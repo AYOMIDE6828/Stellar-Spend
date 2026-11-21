@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from '../api/client';
+import { DEFAULT_TIMEOUT_MS } from './base';
 
 export interface HttpClientConfig {
   baseUrl?: string;
@@ -47,7 +48,7 @@ export class HttpClient {
   constructor(config: HttpClientConfig = {}) {
     this.config = {
       baseUrl: config.baseUrl,
-      timeout: config.timeout ?? 15000,
+      timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
       retries: config.retries ?? 3,
       retryDelay: config.retryDelay ?? 1000,
       backoffMultiplier: config.backoffMultiplier ?? 2,

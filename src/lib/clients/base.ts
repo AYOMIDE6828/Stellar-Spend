@@ -1,3 +1,6 @@
+/** Default per-request timeout shared by HTTP clients (#1465) */
+export const DEFAULT_TIMEOUT_MS = 15_000;
+
 export interface ClientConfig {
   timeout?: number;
   retries?: number;
