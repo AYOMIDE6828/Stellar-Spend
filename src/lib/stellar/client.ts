@@ -298,7 +298,12 @@ export class StellarClient {
       }
     }
 
-    throw lastError || new Error('Unknown error in Stellar RPC call');
+    // Retries exhausted on a transient failure: report the outage clearly and keep the cause (#1473)
+    if (!lastError) throw new Error('Unknown error in Stellar RPC call');
+    throw new Error(
+      `Stellar network unavailable after ${this.retryConfig.maxAttempts} attempts`,
+      { cause: lastError },
+    );
   }
 
   /**
