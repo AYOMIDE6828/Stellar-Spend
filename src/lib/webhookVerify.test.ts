@@ -72,6 +72,13 @@ describe('verifyHmacSignature', () => {
     expect(result.reason).toMatch(/invalid/i);
   });
 
+  it('rejects a signature of the wrong length without comparing bytes (#1466)', async () => {
+    const sig = await makeHmac(PAYLOAD, SECRET);
+    const result = await verifyHmacSignature(PAYLOAD, sig.slice(0, 10), SECRET);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toMatch(/invalid/i);
+  });
+
   it('rejects null / empty signature', async () => {
     const resultNull = await verifyHmacSignature(PAYLOAD, null, SECRET);
     expect(resultNull.valid).toBe(false);
