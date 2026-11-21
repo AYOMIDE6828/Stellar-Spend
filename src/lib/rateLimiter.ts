@@ -68,6 +68,9 @@ export interface RateLimitStore {
  * In-memory rate limit store (suitable for single-instance deployments)
  * This provides compatibility with the old rate-limiting.ts module
  */
+/** Upper bound on tracked keys in the in-memory store (#1461). */
+const MAX_IN_MEMORY_KEYS = 10_000;
+
 class InMemoryRateLimitStore implements RateLimitStore {
   private store: Map<string, { count: number; resetTime: number }> = new Map();
 
@@ -82,10 +85,25 @@ class InMemoryRateLimitStore implements RateLimitStore {
   }
 
   async set(key: string, value: number, ttl: number): Promise<void> {
+    if (!this.store.has(key) && this.store.size >= MAX_IN_MEMORY_KEYS) {
+      this.evictExpired();
+      // Still full of live windows: drop the oldest so memory stays bounded (#1461).
+      if (this.store.size >= MAX_IN_MEMORY_KEYS) {
+        const oldest = this.store.keys().next().value;
+        if (oldest !== undefined) this.store.delete(oldest);
+      }
+    }
     this.store.set(key, {
       count: value,
       resetTime: Date.now() + ttl,
     });
+  }
+
+  private evictExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.store) {
+      if (now > entry.resetTime) this.store.delete(key);
+    }
   }
 
   async increment(key: string, ttl: number): Promise<number> {
