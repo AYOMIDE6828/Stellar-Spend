@@ -365,7 +365,8 @@ export async function aggregateQuotes(
     throw new Error('No enabled providers available');
   }
 
-  const cacheKey = `quote:aggregate:${currency}:${receiveAmount}`;
+  // The provider list is part of the key, so a cached quote from one set is never served for another (#1469).
+  const cacheKey = `quote:aggregate:${currency}:${receiveAmount}:${enabledProviders.join(',')}`;
   const cacheClient = getCacheClient();
   const cached = await cacheClient.get(cacheKey);
   if (cached) {
