@@ -31,26 +31,28 @@
 //! deliberate trade so that [`EscrowContract::migrate`] can enumerate every deposit
 //! during a schema upgrade (Soroban cannot iterate persistent-storage keys).
 //!
-//! # Module layout (#812)
+//! # Module layout (#812, #1318)
 //!
 //! Business logic is split into focused modules; this file is a thin
 //! contract-trait dispatcher:
 //!
 //! | Module        | Responsibility                                       |
 //! |---------------|------------------------------------------------------|
+//! | `storage`     | All raw instance-storage I/O helpers (#1318)         |
 //! | `create`      | [`EscrowContract::deposit`]                          |
-//! | `release`     | [`EscrowContract::release`] + shared guards          |
+//! | `release`     | [`EscrowContract::release`]                          |
 //! | `refund`      | [`EscrowContract::refund`]                           |
 //! | `dispute`     | [`EscrowContract::set_timeout`], `can_refund`        |
 
 #![no_std]
-mod dispute;
+pub mod dispute;
 mod create;
 mod refund;
 mod release;
+pub(crate) mod storage;
 
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map};
-use stellar_spend_shared::{errors::ContractError, validation::check_schema_version};
+use stellar_spend_shared::errors::ContractError;
 
 // ── Sub-modules (issue #812) ──────────────────────────────────────────────────
 
@@ -106,6 +108,10 @@ pub enum EscrowStatus {
     Cancelled,
 }
 
+/// Deposit record (schema v2).
+///
+/// v1 records carried `released`/`refunded` flags and no `fee_bps`;
+/// [`EscrowContract::migrate`] maps those flags onto `status` and defaults the fee to `0`.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EscrowDeposit {
@@ -118,6 +124,9 @@ pub struct EscrowDeposit {
     pub fee_bps: u32,
 }
 
+/// Deposit record as written by schema v1 (no `fee_bps`, `released`/`refunded` flags).
+///
+/// Retained so [`EscrowContract::migrate`] can decode entries from an older build.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EscrowDepositV1 {
@@ -192,17 +201,9 @@ impl EscrowContract {
     /// Fetch a deposit record.
     pub fn get_deposit(env: Env, deposit_id: u64) -> Result<EscrowDeposit, ContractError> {
         Self::require_current_schema(&env)?;
-        release::load_deposits(&env)?
+        storage::load_deposits(&env)?
             .get(deposit_id)
             .ok_or(ContractError::NotFound)
-    }
-
-    /// The stored schema version.
-    pub fn schema_version(env: Env) -> Result<u32, ContractError> {
-        env.storage()
-            .instance()
-            .get(&DataKey::Schema)
-            .ok_or(ContractError::NotInitialized)
     }
 
     /// Update the refund timeout applied to *future* deposits. Authority only.
@@ -223,13 +224,24 @@ impl EscrowContract {
 
     // ── Upgrade surface (issue #817) ──────────────────────────────────────────
 
+    /// Report the stored schema version.
+    ///
+    /// Skips `require_current_schema` on purpose: a deployment that is still on an
+    /// older layout must be able to say so, otherwise `migrate` cannot be targeted.
+    pub fn schema_version(env: Env) -> Result<u32, ContractError> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Schema)
+            .ok_or(ContractError::NotInitialized)
+    }
+
     /// Replace the contract WASM. Authority only.
     ///
     /// Storage is untouched by the swap, so the new build must be able to read the
     /// existing layout — run `migrate` immediately afterwards, in the same
     /// transaction where possible.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), ContractError> {
-        release::require_admin(&env)?;
+        storage::require_admin(&env)?;
         env.deployer().update_current_contract_wasm(new_wasm_hash);
         env.events().publish((symbol_short!("upgrade"),), ());
         Ok(())
@@ -241,7 +253,7 @@ impl EscrowContract {
     /// applies — it is the one call that is *supposed* to run against stale state.
     /// Returns the version migrated from.
     pub fn migrate(env: Env) -> Result<u32, ContractError> {
-        release::require_admin(&env)?;
+        storage::require_admin(&env)?;
 
         let stored: u32 = env
             .storage()
@@ -300,16 +312,11 @@ impl EscrowContract {
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fn require_current_schema(env: &Env) -> Result<(), ContractError> {
-        check_schema_version(
-            env.storage().instance().get(&DataKey::Schema),
-            SCHEMA_VERSION,
-        )
+        storage::require_current_schema(env)
     }
 
     fn bump_instance_ttl(env: &Env) {
-        env.storage()
-            .instance()
-            .extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
+        storage::bump_instance_ttl(env)
     }
 }
 
@@ -318,4 +325,3 @@ pub mod test_utils;
 
 #[cfg(test)]
 mod test;
-mod tests;

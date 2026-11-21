@@ -1,7 +1,6 @@
 import { calculateBackoff, hasRemainingAttempts } from './webhook/retry-scheduler';
 import type { DeliveryRecord } from './webhook/types';
 import { logger } from './logger';
-import { assertWithinBackpressureLimits, evaluateBackpressure } from './queue-backpressure';
 
 export enum TransactionPriority {
   LOW = 1,
@@ -205,14 +204,14 @@ export class TransactionPriorityQueue {
   }
 }
 
-export function calculatePriorityFee(baseFee: string, priority: TransactionPriority): string {
+function calculatePriorityFee(baseFee: string, priority: TransactionPriority): string {
   const base = parseFloat(baseFee);
   if (isNaN(base)) return baseFee;
   const adjusted = base * FEE_MULTIPLIERS[priority];
   return adjusted.toFixed(6);
 }
 
-export function inferPriorityFromAmount(amountUsdc: string): TransactionPriority {
+function inferPriorityFromAmount(amountUsdc: string): TransactionPriority {
   const amount = parseFloat(amountUsdc);
   if (isNaN(amount)) return TransactionPriority.NORMAL;
   if (amount >= 10000) return TransactionPriority.URGENT;
@@ -319,4 +318,76 @@ let _deliveryRetryQueue: DeliveryRetryQueue | null = null;
 export function getDeliveryRetryQueue(): DeliveryRetryQueue {
   if (!_deliveryRetryQueue) _deliveryRetryQueue = new DeliveryRetryQueue();
   return _deliveryRetryQueue;
+}
+
+// ---- Backpressure limits (merged from queue-backpressure) ----
+
+export const DEFAULT_MAX_QUEUE_DEPTH = 500;
+export const DEFAULT_MAX_INFLIGHT = 50;
+
+export interface BackpressureLimits {
+  maxQueueDepth: number;
+  maxInflight: number;
+}
+
+export interface BackpressureStatus extends BackpressureLimits {
+  queueDepth: number;
+  inflight: number;
+  queueOverLimit: boolean;
+  inflightOverLimit: boolean;
+  overLimit: boolean;
+}
+
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getBackpressureLimits(): BackpressureLimits {
+  return {
+    maxQueueDepth: readPositiveIntEnv('QUEUE_MAX_DEPTH', DEFAULT_MAX_QUEUE_DEPTH),
+    maxInflight: readPositiveIntEnv('QUEUE_MAX_INFLIGHT', DEFAULT_MAX_INFLIGHT),
+  };
+}
+
+/** Pure function: given depth/inflight counts and limits, compute backpressure status. */
+export function evaluateBackpressure(
+  queueDepth: number,
+  inflight: number,
+  limits: BackpressureLimits = getBackpressureLimits(),
+): BackpressureStatus {
+  const queueOverLimit = queueDepth >= limits.maxQueueDepth;
+  const inflightOverLimit = inflight >= limits.maxInflight;
+  return {
+    ...limits,
+    queueDepth,
+    inflight,
+    queueOverLimit,
+    inflightOverLimit,
+    overLimit: queueOverLimit || inflightOverLimit,
+  };
+}
+
+export class QueueBackpressureError extends Error {
+  readonly status: BackpressureStatus;
+
+  constructor(status: BackpressureStatus) {
+    super(
+      status.queueOverLimit
+        ? `Queue depth limit reached (${status.queueDepth}/${status.maxQueueDepth})`
+        : `In-flight limit reached (${status.inflight}/${status.maxInflight})`,
+    );
+    this.name = 'QueueBackpressureError';
+    this.status = status;
+  }
+}
+
+/** Throws QueueBackpressureError if the given counts exceed configured limits. */
+export function assertWithinBackpressureLimits(queueDepth: number, inflight: number): void {
+  const status = evaluateBackpressure(queueDepth, inflight);
+  if (status.overLimit) {
+    throw new QueueBackpressureError(status);
+  }
 }

@@ -4,7 +4,11 @@
 //! `Env::default()` / `register` / `init` (issue #818). Assertions go through the
 //! generated `try_*` client methods so that a contract error is checked by value
 //! instead of being swallowed by a panic.
-use soroban_sdk::{symbol_short, testutils::Address as _, Address};
+use soroban_sdk::{
+    symbol_short,
+    testutils::{Address as _, MockAuth, MockAuthInvoke},
+    Address, IntoVal, Vec,
+};
 use stellar_spend_shared::errors::ContractError;
 
 use crate::test_utils::{assert_fresh_init_is_current, EscrowTest, START_LEDGER};
@@ -227,6 +231,32 @@ fn refund_succeeds_after_timeout_for_depositor() {
     let id = t.deposit(400);
     t.advance_past_timeout();
 
+    // `refund` authorises the *depositor*, and takes no caller argument, so the
+    // only way to express "someone else tried" is to mock authorisation for a
+    // different address. The depositor's `require_auth` then has no matching
+    // entry and the host refuses the call before any state changes.
+    t.env.mock_auths(&[MockAuth {
+        address: &t.other,
+        invoke: &MockAuthInvoke {
+            contract: &t.contract_id,
+            fn_name: "refund",
+            args: Vec::from_array(&t.env, [id.into_val(&t.env)]),
+            sub_invokes: &[],
+        },
+    }]);
+
+    assert!(t.client().try_refund(&id).is_err(), "refund must be rejected");
+
+    // With the depositor's own authorisation the same refund goes through.
+    t.env.mock_auths(&[MockAuth {
+        address: &t.depositor,
+        invoke: &MockAuthInvoke {
+            contract: &t.contract_id,
+            fn_name: "refund",
+            args: Vec::from_array(&t.env, [id.into_val(&t.env)]),
+            sub_invokes: &[],
+        },
+    }]);
     assert_eq!(t.client().try_refund(&id), Ok(Ok(400)));
 }
 
@@ -329,7 +359,7 @@ fn init_emits_event_with_settlement_authority() {
     t.client().init(&t.admin);
 
     // The init event is the only event emitted by this call.
-    // Topic: ("init",)   Data: settlement_authority
+    // Topic: (init,)   Data: settlement_authority
     let events = t.env.events().all();
     assert_eq!(events.len(), 1);
     let event = events.get(0).unwrap();
@@ -338,7 +368,7 @@ fn init_emits_event_with_settlement_authority() {
         &t.contract_id,
         &t.env,
         symbol_short!("init"),
-        t.admin,
+        t.admin.clone(),
     );
 }
 
@@ -619,5 +649,99 @@ fn refunded_deposit_cannot_be_released_or_refunded() {
         t.client().try_refund(&id),
         Err(Ok(ContractError::AlreadyProcessed)),
         "a cancelled deposit must not be refundable"
+    );
+}
+
+// ── Deployment / migration runbook acceptance checks (issue #1424) ───────────
+//
+// These tests back the acceptance checks documented in the deployment and
+// migration runbook (`migrations/README.md`). They assert the invariants the
+// documented deploy order relies on:
+//
+//   1. After `init`, `schema_version` reports the current `SCHEMA_VERSION`
+//      (so the runbook's post-deploy verification step is meaningful).
+//   2. `migrate` on an already-current contract is a no-op that reports
+//      `SchemaAlreadyCurrent` (so re-running the migration step is safe).
+//   3. `upgrade` requires the admin's authorisation (so a deploy cannot be
+//      hijacked by an unauthorised caller).
+
+#[test]
+fn schema_version_matches_expected_after_init() {
+    // Runbook step: "after init, verify schema_version == SCHEMA_VERSION".
+    let t = EscrowTest::setup();
+    assert_eq!(
+        t.client().schema_version(),
+        SCHEMA_VERSION,
+        "a freshly initialised contract must report the current schema version"
+    );
+}
+
+#[test]
+fn migrate_on_current_schema_reports_already_current() {
+    // Runbook step: "re-running migrate is safe and idempotent".
+    let t = EscrowTest::setup();
+    assert_eq!(
+        t.client().try_migrate(),
+        Err(Ok(ContractError::SchemaAlreadyCurrent)),
+        "migrate on an already-current contract must report SchemaAlreadyCurrent"
+    );
+    // The failed migrate must not have moved the schema version.
+    assert_eq!(t.client().schema_version(), SCHEMA_VERSION);
+}
+
+#[test]
+fn migrate_from_legacy_state_reaches_current_schema() {
+    // Runbook step: "migrate upgrades a legacy deployment to SCHEMA_VERSION".
+    let t = EscrowTest::with_legacy_v1_state();
+    t.client().migrate();
+    assert_eq!(
+        t.client().schema_version(),
+        SCHEMA_VERSION,
+        "migrate must bring a legacy deployment up to the current schema version"
+    );
+    // A second migrate is now a no-op.
+    assert_eq!(
+        t.client().try_migrate(),
+        Err(Ok(ContractError::SchemaAlreadyCurrent))
+    );
+}
+
+#[test]
+fn upgrade_requires_admin_authorisation() {
+    // Runbook step: "upgrade must be authorised by the admin".
+    let t = EscrowTest::setup();
+    let new_wasm_hash = soroban_sdk::BytesN::from_array(&t.env, &[7u8; 32]);
+
+    // Mock authorisation for a non-admin address: the admin's `require_auth`
+    // has no matching entry, so the host refuses the call before any state
+    // changes.
+    t.env.mock_auths(&[MockAuth {
+        address: &t.other,
+        invoke: &MockAuthInvoke {
+            contract: &t.contract_id,
+            fn_name: "upgrade",
+            args: Vec::from_array(&t.env, [new_wasm_hash.clone().into_val(&t.env)]),
+            sub_invokes: &[],
+        },
+    }]);
+
+    assert!(
+        t.client().try_upgrade(&new_wasm_hash).is_err(),
+        "upgrade must be rejected when the admin has not authorised it"
+    );
+
+    // With the admin's own authorisation the call is accepted.
+    t.env.mock_auths(&[MockAuth {
+        address: &t.admin,
+        invoke: &MockAuthInvoke {
+            contract: &t.contract_id,
+            fn_name: "upgrade",
+            args: Vec::from_array(&t.env, [new_wasm_hash.clone().into_val(&t.env)]),
+            sub_invokes: &[],
+        },
+    }]);
+    assert!(
+        t.client().try_upgrade(&new_wasm_hash).is_ok(),
+        "upgrade must succeed when authorised by the admin"
     );
 }

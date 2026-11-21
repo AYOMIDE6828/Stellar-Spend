@@ -146,10 +146,14 @@ sequenceDiagram
 ## Setup Guide
 
 > 📖 **Full Setup Guide**: For complete end-to-end instructions covering Rust toolchains, Soroban smart contracts, PostgreSQL, and troubleshooting common RPC errors, see **[`docs/local-dev-setup.md`](./docs/local-dev-setup.md)**.
+>
+> 🧑‍💻 **Developer quickstart**: For a copy-pasteable, clean-machine walkthrough (prerequisites, every env var, database migrations, tests), see **[`docs/developer-setup.md`](./docs/developer-setup.md)**.
 
 ### Prerequisites
 
-- Node.js ≥ 20
+- Node.js ≥ 20 (LTS recommended) and npm ≥ 10
+- Rust + the Soroban/Stellar CLI toolchain (only needed for `contracts/`)
+- PostgreSQL ≥ 15 (only needed for features that persist state locally)
 - A [Paycrest](https://paycrest.io) account (API key + webhook secret)
 - A Base wallet private key (for the server-side payout wallet)
 - A Base RPC URL (e.g. from [Alchemy](https://alchemy.com) or [Infura](https://infura.io))
@@ -203,6 +207,15 @@ npm start
 npm run build:analyze
 ```
 
+### 8. Verify your setup
+
+```bash
+npm run verify:tsconfig   # TypeScript configs are consistent
+npm test                  # unit tests, coverage must stay >= 85%
+```
+
+> A clean-machine checklist (including database migrations and the docs acceptance check) lives in [`docs/developer-setup.md`](./docs/developer-setup.md).
+
 ---
 
 ## Environment Variables
@@ -223,6 +236,10 @@ All variables are documented in [`.env.example`](./.env.example). The table belo
 | `NEXT_PUBLIC_STELLAR_USDC_ISSUER`     | ✅       | ✅                 | Stellar USDC issuer account (for trustline filtering) |
 
 > ⚠️ **Never** prefix secrets with `NEXT_PUBLIC_`. The app validates this at startup and throws if a secret is accidentally exposed.
+
+The authoritative list of required keys is defined in `src/lib/config/schema.ts` (`requiredServerEnvKeys`, `requiredPublicEnvKeys`, `forbiddenPublicSecretKeys`) and validated against `src/env.d.ts` / `src/lib/env.ts`. Every key in those lists must be documented in [`docs/developer-setup.md`](./docs/developer-setup.md) — a test enforces this.
+
+---
 
 ---
 
@@ -458,6 +475,10 @@ Questions or feedback? Reach out on Telegram: [t.me/Xoulomon](https://t.me/Xoulo
 
 [MIT](./LICENSE) © Stellar-Spend Contributors
 
+## Developer Setup
+
+New to the project? Start with **[`docs/developer-setup.md`](./docs/developer-setup.md)** — it covers prerequisites, every environment variable (required vs optional, defaults), database migrations, running the dev server, and the full test suite on a clean machine.
+
 ## TypeScript Configuration
 
 ### Base Config
@@ -475,3 +496,8 @@ bash scripts/verify-tsconfig.sh
 
 
 .
+
+## Handsoff notes
+
+<!-- handsoff-issue-1176 -->
+- #1176: [Frontend] Consolidate duplicate styling in `components/ui` via design tokens

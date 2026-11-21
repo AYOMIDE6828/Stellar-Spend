@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
-import { paycrestOrderLimiter, getClientIp } from '@/lib/offramp';
+import { applyRateLimit } from '@/lib/rateLimiter';
 import { generateRequestId, createRequestLogger } from '@/lib/offramp';
 import { withIdempotency } from '@/lib/idempotency';
 import { ErrorHandler } from '@/lib/error-handler';
@@ -12,11 +12,7 @@ export const maxDuration = 20;
 import { PayoutOrderRequest } from '@/lib/offramp';
 
 import { PaycrestAdapter, PaycrestHttpError } from '@/lib/offramp';
-
-function withRequestId<T>(response: NextResponse<T>, requestId: string): NextResponse<T> {
-  response.headers.set('X-Request-Id', requestId);
-  return response;
-}
+import { withRequestId } from '@/lib/http/request-id';
 
 /**
  * POST /api/offramp/paycrest/order
@@ -51,17 +47,14 @@ function withRequestId<T>(response: NextResponse<T>, requestId: string): NextRes
 export async function POST(req: NextRequest) {
   return withIdempotency(req, async () => {
     const requestId = generateRequestId();
-    const clientIp = getClientIp(req);
     const logger = createRequestLogger(requestId, 'POST', '/api/offramp/paycrest/order');
 
     try {
-      // Check rate limit
-      const rateLimitCheck = await paycrestOrderLimiter.check(clientIp);
-      if (!rateLimitCheck.allowed) {
+      // Rate limiting is enforced by the shared middleware helper (registry: 'paycrest-order')
+      const limited = await applyRateLimit(req, 'paycrest-order');
+      if (limited) {
         logger.logError(429, 'Rate limit exceeded');
-        const res = withRequestId(ErrorHandler.rateLimit('Too many requests', rateLimitCheck.retryAfter), requestId);
-        res.headers.set('Retry-After', String(rateLimitCheck.retryAfter));
-        return res;
+        return withRequestId(limited, requestId);
       }
 
       const rawBody = await req.json();

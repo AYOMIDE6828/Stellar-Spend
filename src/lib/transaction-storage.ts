@@ -1,4 +1,5 @@
-import type { TransactionStatus, PayoutStatus, BridgeStatus } from '@/lib/transaction-status';
+import { randomHex } from "@/lib/crypto/ids";
+import type { TransactionStatus, PayoutStatus, BridgeStatus } from '@/lib/transactions/transaction-status';
 
 export interface Transaction {
   id: string;
@@ -52,15 +53,60 @@ export interface Transaction {
   };
 }
 
-const STORAGE_KEY = 'stellar_spend_transactions';
-const MAX_TRANSACTIONS = 50;
+/**
+ * Shared localStorage persistence helpers. Every browser-side store in the
+ * app (transactions, sync settings, sync metadata, sync queue) goes through
+ * these so SSR guards and JSON error handling live in one place.
+ */
+export function readStoredJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Returns false when the write fails (e.g. quota exceeded or no window). */
+export function writeStoredJson(key: string, value: unknown): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function removeStoredItem(key: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(key);
+}
+
+export const TRANSACTIONS_STORAGE_KEY = 'stellar_spend_transactions';
+export const MAX_TRANSACTIONS = 50;
+
+/**
+ * Persist the full transaction list. Kept as a single write path so the
+ * transactions service and the legacy `TransactionStorage` class stay in sync.
+ */
+export function writeTransactions(transactions: Transaction[]): boolean {
+  return writeStoredJson(TRANSACTIONS_STORAGE_KEY, transactions.slice(0, MAX_TRANSACTIONS));
+}
+
+/** Read the persisted transaction list, tolerating missing/corrupt data. */
+export function readTransactions(): Transaction[] {
+  const stored = readStoredJson<unknown>(TRANSACTIONS_STORAGE_KEY, []);
+  return Array.isArray(stored) ? (stored as Transaction[]) : [];
+}
 
 export class TransactionStorage {
   static save(transaction: Transaction): void {
     if (typeof window === 'undefined') return;
     const all = this.getAll();
     all.unshift(transaction);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.slice(0, MAX_TRANSACTIONS)));
+    writeTransactions(all);
   }
 
   static update(id: string, updates: Partial<Transaction>): void {
@@ -69,24 +115,19 @@ export class TransactionStorage {
     const i = all.findIndex((tx) => tx.id === id);
     if (i !== -1) {
       all[i] = { ...all[i], ...updates };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      writeTransactions(all);
     }
   }
 
   static remove(id: string): void {
     if (typeof window === 'undefined') return;
     const all = this.getAll().filter((tx) => tx.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    writeTransactions(all);
   }
 
   static getAll(): Transaction[] {
     if (typeof window === 'undefined') return [];
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return readTransactions();
   }
 
   static getByUser(userAddress: string): Transaction[] {
@@ -98,8 +139,7 @@ export class TransactionStorage {
   }
 
   static clear(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(STORAGE_KEY);
+    removeStoredItem(TRANSACTIONS_STORAGE_KEY);
   }
 
   static updateNote(id: string, note: string): void {
@@ -107,7 +147,7 @@ export class TransactionStorage {
   }
 
   static generateId(): string {
-    return `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `tx_${Date.now()}_${randomHex(6)}`;
   }
 
   static isReversalEligible(tx: Transaction): boolean {
@@ -173,8 +213,8 @@ export class TransactionStorage {
   static addTag(id: string, tagName: string, color: string = '#3b82f6'): void {
     const tx = this.getById(id);
     if (!tx) return;
-    const tags = tx.tags || [];
-    const tagId = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tagId = `tag_${Date.now()}_${randomHex(6)}`;
+    const tags = [...(tx.tags ?? [])];
     tags.push({ id: tagId, name: tagName, color });
     this.update(id, { tags });
   }

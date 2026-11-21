@@ -1,6 +1,6 @@
-import type { PayoutStatus } from '@/lib/transaction-status';
+import type { PayoutStatus } from '@/lib/transactions';
 
-export function mapPaycrestStatus(eventType: string): PayoutStatus | null {
+function mapPaycrestStatus(eventType: string): PayoutStatus | null {
   switch (eventType) {
     case 'payment_order.pending':
       return 'pending';

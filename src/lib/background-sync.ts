@@ -1,9 +1,10 @@
-import { logger } from '@/lib/logger';
-('use client');
+'use client';
 
+import { logger } from '@/lib/logger';
 import { useEffect, useState, useCallback } from 'react';
 import type { Transaction } from './transaction-storage';
 import { syncTransactionHistory, getSyncStatus } from './transaction-sync-client';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 interface FailedTransaction extends Transaction {
   retryCount?: number;
@@ -36,6 +37,7 @@ export interface SyncStatus {
 }
 
 export function useBackgroundSync() {
+  const isOnline = useOnlineStatus();
   const [isSupported, setIsSupported] = useState(false);
   const [failedTransactions, setFailedTransactions] = useState<FailedTransaction[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
@@ -163,6 +165,7 @@ export function useBackgroundSync() {
   };
 
   return {
+    isOnline,
     isSupported,
     failedTransactions,
     addFailedTransaction,

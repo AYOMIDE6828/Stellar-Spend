@@ -221,7 +221,7 @@ export class CircuitTimeoutError extends Error {
  * Circuit breaker for outbound Stellar Horizon API calls.
  * Opens after 5 consecutive failures; resets after 30 s.
  */
-export const horizonBreaker = new CircuitBreaker({
+const horizonBreaker = new CircuitBreaker({
   name: 'stellar-horizon',
   failureThreshold: 5,
   resetTimeoutMs: 30_000,
@@ -248,4 +248,12 @@ export const allbridgeBreaker = new CircuitBreaker({
   failureThreshold: 5,
   resetTimeoutMs: 60_000,
   timeoutMs: 20_000,
+});
+
+/** Shared breaker for Paycrest offramp provider calls (#1206). */
+export const paycrestBreaker = new CircuitBreaker({
+  name: 'paycrest',
+  failureThreshold: 5,
+  resetTimeoutMs: 30_000,
+  timeoutMs: 15_000,
 });

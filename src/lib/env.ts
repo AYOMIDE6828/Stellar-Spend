@@ -1,86 +1,42 @@
-const requiredServerEnvKeys = [
-  'PAYCREST_API_KEY',
-  'PAYCREST_WEBHOOK_SECRET',
-  'BASE_PRIVATE_KEY',
-  'BASE_RETURN_ADDRESS',
-  'BASE_RPC_URL',
-  'STELLAR_SOROBAN_RPC_URL',
-  'STELLAR_HORIZON_URL',
-  'DATABASE_URL',
-] as const;
+import { loadEnvConfig, type ValidatedEnv } from './config/schema';
 
-const requiredPublicEnvKeys = [
-  'NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL',
-  'NEXT_PUBLIC_BASE_RETURN_ADDRESS',
-  'NEXT_PUBLIC_STELLAR_USDC_ISSUER',
-] as const;
+/**
+ * Centralized environment configuration entry point.
+ *
+ * All environment validation rules live in `config/schema.ts`. This module is
+ * the single place that binds those rules to `process.env` and is responsible
+ * for validating the environment eagerly at startup so that misconfiguration
+ * fails fast (with the aggregated error produced by the schema loader) rather
+ * than surfacing later at an arbitrary point in the application.
+ */
 
-const forbiddenPublicSecretKeys = [
-  'NEXT_PUBLIC_PAYCREST_API_KEY',
-  'NEXT_PUBLIC_BASE_PRIVATE_KEY',
-] as const;
-
-type RequiredServerEnvKey = (typeof requiredServerEnvKeys)[number];
-type RequiredPublicEnvKey = (typeof requiredPublicEnvKeys)[number];
-
-function isMissing(value: string | undefined) {
-  return !value || value.trim().length === 0;
+/**
+ * Validate `process.env` against the schema and return the typed environment.
+ *
+ * Throws an aggregated error (from `config/schema.ts`) listing every problem
+ * found, so callers get a complete picture of what is misconfigured instead of
+ * only the first failure.
+ */
+export function validateEnv(): ValidatedEnv {
+  return loadEnvConfig(process.env);
 }
 
-function buildEnvErrorMessage(
-  missingServerKeys: string[],
-  missingPublicKeys: string[],
-  forbiddenPublicKeys: string[],
-) {
-  const lines = [
-    'Invalid environment configuration for Stellar-Spend.',
-    'Create or update .env.local using .env.example before starting the server.',
-  ];
+/**
+ * Test-environment bypass.
+ *
+ * Under Vitest we deliberately skip eager validation so that unit tests can
+ * import modules that depend on `env` without having to provide a complete,
+ * valid environment. Tests that exercise validation itself should call
+ * `validateEnv()` directly (or stub `process.env`) rather than relying on the
+ * eagerly-evaluated `env` export.
+ */
+const isTestEnv = Boolean(process.env.VITEST);
 
-  if (missingServerKeys.length > 0) {
-    lines.push('');
-    lines.push(`Missing required server env vars: ${missingServerKeys.join(', ')}`);
-  }
-
-  if (missingPublicKeys.length > 0) {
-    lines.push('');
-    lines.push(`Missing required public env vars: ${missingPublicKeys.join(', ')}`);
-  }
-
-  if (forbiddenPublicKeys.length > 0) {
-    lines.push('');
-    lines.push(`Remove secret values from public env vars: ${forbiddenPublicKeys.join(', ')}`);
-    lines.push('PAYCREST_API_KEY and BASE_PRIVATE_KEY must never use the NEXT_PUBLIC_ prefix.');
-  }
-
-  return lines.join('\n');
-}
-
-export function validateEnv() {
-  const missingServerKeys = requiredServerEnvKeys.filter((key) => isMissing(process.env[key]));
-  const missingPublicKeys = requiredPublicEnvKeys.filter((key) => isMissing(process.env[key]));
-  const forbiddenPublicKeys = forbiddenPublicSecretKeys.filter(
-    (key) => !isMissing(process.env[key]),
-  );
-
-  if (
-    missingServerKeys.length > 0 ||
-    missingPublicKeys.length > 0 ||
-    forbiddenPublicKeys.length > 0
-  ) {
-    throw new Error(
-      buildEnvErrorMessage(missingServerKeys, missingPublicKeys, forbiddenPublicKeys),
-    );
-  }
-
-  return {
-    server: Object.fromEntries(
-      requiredServerEnvKeys.map((key) => [key, process.env[key]!]),
-    ) as Record<RequiredServerEnvKey, string>,
-    public: Object.fromEntries(
-      requiredPublicEnvKeys.map((key) => [key, process.env[key]!]),
-    ) as Record<RequiredPublicEnvKey, string>,
-  };
-}
-
-export const env = process.env.VITEST ? ({} as ReturnType<typeof validateEnv>) : validateEnv();
+/**
+ * The validated, typed environment.
+ *
+ * In production/development this is the result of eager validation at module
+ * load time (fail fast). In the test environment it is an empty placeholder
+ * cast to `ValidatedEnv`; see the bypass note above.
+ */
+export const env: ValidatedEnv = isTestEnv ? ({} as ValidatedEnv) : validateEnv();

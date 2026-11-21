@@ -13,12 +13,26 @@ import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import { diag, DiagLogLevel } from '@opentelemetry/api';
 import { logger } from './logger';
 
-// Enable debug logging in development
+/**
+ * Structured logger adapter for OpenTelemetry diagnostics.
+ * Routes internal OTel diagnostics through the application logger
+ * instead of writing to the console.
+ */
+const diagLogger = {
+  error: (message: string, ...args: unknown[]) => logger.error('otel.diag.error', { message, args }),
+  warn: (message: string, ...args: unknown[]) => logger.warn('otel.diag.warn', { message, args }),
+  info: (message: string, ...args: unknown[]) => logger.info('otel.diag.info', { message, args }),
+  debug: (message: string, ...args: unknown[]) => logger.debug('otel.diag.debug', { message, args }),
+  verbose: (message: string, ...args: unknown[]) =>
+    logger.debug('otel.diag.verbose', { message, args }),
+};
+
+// Enable debug logging in development, routed through the structured logger
 if (process.env.NODE_ENV === 'development') {
-  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
+  diag.setLogger(diagLogger, DiagLogLevel.DEBUG);
 }
 
 /**

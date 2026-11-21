@@ -1,32 +1,29 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useBackgroundSync } from '@/lib/background-sync';
+import { useBackgroundSync, useOnlineStatus } from '@/lib/background-sync';
+import { CHROME_TOKENS } from '@/lib/theme-tokens';
+
+const OFFLINE_BANNER_MESSAGES = {
+  offline: "You're offline — showing cached data. Actions will sync when you reconnect.",
+  syncing: 'Back online — syncing queued actions...',
+} as const;
+
+const OFFLINE_BANNER_ICONS = {
+  offline: '⚠',
+  syncing: '⟳',
+} as const;
 
 /**
  * Shows a degraded-mode banner while offline and automatically retries
  * any actions queued via useBackgroundSync once connectivity returns.
  */
 export default function OfflineBanner() {
-  const [isOffline, setIsOffline] = useState(false);
+  const isOnline = useOnlineStatus();
+  const isOffline = !isOnline;
   const [isSyncing, setIsSyncing] = useState(false);
   const { failedTransactions, retryFailedTransaction } = useBackgroundSync();
   const wasOffline = useRef(false);
-
-  useEffect(() => {
-    setIsOffline(!navigator.onLine);
-
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // When connectivity returns after being offline, retry any queued actions.
   useEffect(() => {
@@ -56,17 +53,25 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="sticky top-0 z-50 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-semibold tracking-widest uppercase bg-[#1a1a1a] border-b border-[#333333] text-[#c9a962]"
+      aria-atomic="true"
+      aria-busy={isSyncing}
+      data-testid="offline-banner"
+      className="sticky top-0 z-50 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-semibold tracking-widest uppercase border-b"
+      style={{
+        backgroundColor: CHROME_TOKENS.surfaceElevated,
+        borderColor: CHROME_TOKENS.border,
+        color: CHROME_TOKENS.gold,
+      }}
     >
       {isOffline ? (
         <>
-          <span aria-hidden="true">⚠</span>
-          You&apos;re offline — showing cached data. Actions will sync when you reconnect.
+          <span aria-hidden="true">{OFFLINE_BANNER_ICONS.offline}</span>
+          <span>{OFFLINE_BANNER_MESSAGES.offline}</span>
         </>
       ) : (
         <>
-          <span aria-hidden="true">⟳</span>
-          Back online — syncing queued actions...
+          <span aria-hidden="true">{OFFLINE_BANNER_ICONS.syncing}</span>
+          <span>{OFFLINE_BANNER_MESSAGES.syncing}</span>
         </>
       )}
     </div>
