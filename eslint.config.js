@@ -145,7 +145,10 @@ export default [
           ignoreRestSiblings: true,
         },
       ],
-      'no-console': 'warn',
+      // Escalated to error in src/** below; warn here covers everything else
+      // (e2e/, scripts/ .ts files, root config files, etc.) so accidental
+      // console leaks are still surfaced outside the strict application layer.
+      'no-console': ['error', { allow: ['warn', 'error'] }],
 
       // ── Error-handling lint rules (#1543) ──────────────────────────────────
       // Floating promises (unawaited async calls) hide errors silently.
@@ -156,6 +159,18 @@ export default [
       // Prefix the catch parameter with _ to suppress when intentional:
       //   catch (_e) { /* intentionally ignored */ }
       'no-empty': ['error', { allowEmptyCatch: false }],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // scripts/** exemption — CLI tools write to stdout/stderr intentionally.
+  // console.* is the correct output mechanism for Node.js scripts; there is
+  // no structured logger available in that context.
+  // ---------------------------------------------------------------------------
+  {
+    files: ['scripts/**/*.{ts,js,cjs,mjs}'],
+    rules: {
+      'no-console': 'off',
     },
   },
 
@@ -236,6 +251,21 @@ export default [
     ignores: ['src/**/__tests__/**', 'src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Explicitly enforce no-explicit-any as an error for src/lib (#1355).
+  // The rule is already set globally but this block makes the intent explicit
+  // for the lib layer: `any` defeats TypeScript's safety guarantees and must
+  // not appear in shared library code.  Use `unknown` + type-guards, precise
+  // union types, or targeted eslint-disable comments with a justification
+  // comment when interacting with untyped third-party APIs.
+  // ---------------------------------------------------------------------------
+  {
+    files: ['src/lib/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 ];
