@@ -146,6 +146,16 @@ export default [
         },
       ],
       'no-console': 'warn',
+
+      // ── Error-handling lint rules (#1543) ──────────────────────────────────
+      // Floating promises (unawaited async calls) hide errors silently.
+      // Prefix with `void` to explicitly opt out: `void somePromise()`.
+      '@typescript-eslint/no-floating-promises': 'error',
+      // Empty catch blocks swallow errors with no trace.
+      // At minimum log the caught error or rethrow it.
+      // Prefix the catch parameter with _ to suppress when intentional:
+      //   catch (_e) { /* intentionally ignored */ }
+      'no-empty': ['error', { allowEmptyCatch: false }],
     },
   },
 
