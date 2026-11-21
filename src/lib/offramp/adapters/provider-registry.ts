@@ -36,6 +36,10 @@ export class BridgeProviderRegistry {
   private routes: PerCorridorRoute[] = [];
 
   registerBridge(name: string, adapter: BridgeProviderAdapter): void {
+    // A second registration would silently replace the first adapter (#1464).
+    if (this.bridges.has(name)) {
+      throw new Error(`Bridge provider already registered: ${name}`);
+    }
     this.bridges.set(name, adapter);
   }
 
