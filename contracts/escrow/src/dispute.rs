@@ -291,4 +291,5 @@ impl DisputeHandler {
             env.storage().instance().set(&DataKey::Deposits, &deposits);
         }
     }
+
 }
